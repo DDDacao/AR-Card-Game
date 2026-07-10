@@ -13,5 +13,9 @@ public class CardDataSO : ScriptableObject
 
     public string description;
 
-    //todo: add card effect
+    [Header("效果数值 (如伤害、护甲值)")]
+    public int effectValue;
+
+    [Header("次要效果数值 (如附加灼烧层数、回灵气值)")]
+    public int effectValue2;
 }

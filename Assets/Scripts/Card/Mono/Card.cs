@@ -39,11 +39,11 @@ public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
 
     public void UpdataPosition(Vector3 position)
     {
-        transform.position = position;
+        transform.localPosition = position;
     }
     public void OnPointerEnter(PointerEventData eventData)
     {
-        transform.position = originalPosition+Vector3.up;
+        transform.localPosition = originalPosition + Vector3.up;
         GetComponent<SortingGroup>().sortingOrder = 25;
     }
     public void OnPointerExit(PointerEventData eventData)
@@ -53,7 +53,7 @@ public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
 
     public void ResetCardPosition()
     {
-        transform.position = originalPosition;
+        transform.localPosition = originalPosition;
         GetComponent<SortingGroup>().sortingOrder = originallayerOrder;
     }
 }

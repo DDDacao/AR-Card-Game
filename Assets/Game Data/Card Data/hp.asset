@@ -17,3 +17,5 @@ MonoBehaviour:
   cost: 2
   cardType: 2
   description: plus HP 6
+  effectValue: 0
+  effectValue2: 1

@@ -19,8 +19,15 @@ public class CardArrow : MonoBehaviour
 
     private void Update()
     {
-       mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x,Input.mousePosition.y,10));
-          // 2. 实时计算并绘制贝塞尔曲线
+        Camera mainCam = Camera.main;
+        if (mainCam == null)
+        {
+            Debug.LogError("CardArrow: Camera.main is null! 请确保你的 AR Camera 在 Unity 编辑器中的 Tag（标签）已被设置为 'MainCamera'。");
+            return;
+        }
+
+        mousePos = mainCam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10));
+        // 2. 实时计算并绘制贝塞尔曲线
         SetArrowPosition();
     }
 

@@ -17,3 +17,5 @@ MonoBehaviour:
   cost: 1
   cardType: 1
   description: defense 6 damega
+  effectValue: 6
+  effectValue2: 0

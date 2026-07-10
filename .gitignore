@@ -38,3 +38,7 @@ Thumbs.db
 # 忽略 Visual Studio 的缓存
 .vs/
 .vscode/
+
+# 忽略大包压缩文件 (防止 GitHub 100MB 限制报错)
+*.tgz
+Packages/*.tgz
