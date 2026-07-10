@@ -30,7 +30,10 @@ public class CardDragHandler : MonoBehaviour,IBeginDragHandler,IEndDragHandler,I
         switch (currentCard.cardData.cardType)
         {
             case CardType.Attack:
-            currentArrow = Instantiate(arrowPrefab,transform.position,Quaternion.identity);
+                currentArrow = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
+                int cardLayer = LayerMask.NameToLayer("Card");
+                if (cardLayer == -1) cardLayer = 6;
+                CardCameraManager.SetLayerRecursive(currentArrow, cardLayer);
                 break;
                
             case CardType.Defense:
@@ -45,12 +48,14 @@ public class CardDragHandler : MonoBehaviour,IBeginDragHandler,IEndDragHandler,I
     {
         if(canMove)
         {
-            Vector3 screenPos = new(Input.mousePosition.x,Input.mousePosition.y,10);
-            Vector3 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
+            Vector3 screenPos = new(Input.mousePosition.x, Input.mousePosition.y, 10);
+            Camera dragCamera = (CardCameraManager.Instance != null && CardCameraManager.Instance.cardCamera != null)
+                ? CardCameraManager.Instance.cardCamera
+                : Camera.main;
+            Vector3 worldPos = dragCamera.ScreenToWorldPoint(screenPos);
 
             currentCard.transform.position = worldPos;
-            canExecute = worldPos.y>0.5f;
-            
+            canExecute = worldPos.y > 0.5f;
         }
     }
 

@@ -19,14 +19,17 @@ public class CardArrow : MonoBehaviour
 
     private void Update()
     {
-        Camera mainCam = Camera.main;
-        if (mainCam == null)
+        Camera activeCam = (CardCameraManager.Instance != null && CardCameraManager.Instance.cardCamera != null)
+            ? CardCameraManager.Instance.cardCamera
+            : Camera.main;
+
+        if (activeCam == null)
         {
-            Debug.LogError("CardArrow: Camera.main is null! 请确保你的 AR Camera 在 Unity 编辑器中的 Tag（标签）已被设置为 'MainCamera'。");
+            Debug.LogError("CardArrow: No active camera found for screen to world point conversion! 请确保场景中有 Tag 为 MainCamera 的相机。");
             return;
         }
 
-        mousePos = mainCam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10));
+        mousePos = activeCam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10));
         // 2. 实时计算并绘制贝塞尔曲线
         SetArrowPosition();
     }

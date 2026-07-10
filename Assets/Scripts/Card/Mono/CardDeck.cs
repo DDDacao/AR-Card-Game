@@ -53,6 +53,12 @@ public void TestDrawCard(){
         drawDeck.RemoveAt(0);
 
         var cardObj = cardManager.GetCardObj();
+        
+        // 递归应用 Card 层，使其归 Overlay 相机渲染
+        int cardLayer = LayerMask.NameToLayer("Card");
+        if (cardLayer == -1) cardLayer = 6;
+        CardCameraManager.SetLayerRecursive(cardObj, cardLayer);
+
         if (handAnchor != null)
         {
             cardObj.transform.SetParent(handAnchor, false);
