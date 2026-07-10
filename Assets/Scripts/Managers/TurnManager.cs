@@ -30,6 +30,7 @@ public class TurnManager : MonoBehaviour
         if (playerStats == null)
         {
             GameObject playerGo = GameObject.Find("Player");
+            if (playerGo == null) playerGo = GameObject.Find("PlayerManager");
             if (playerGo != null) playerStats = playerGo.GetComponent<CharacterStats>();
         }
         
@@ -38,7 +39,7 @@ public class TurnManager : MonoBehaviour
             CharacterStats[] allStats = FindObjectsByType<CharacterStats>();
             foreach (var stat in allStats)
             {
-                if (stat.gameObject.name != "Player")
+                if (stat.gameObject.name != "Player" && stat.gameObject.name != "PlayerManager")
                 {
                     enemyStats = stat;
                     break;

@@ -26,6 +26,7 @@ public class HealthBarUI : MonoBehaviour
             if (isPlayer)
             {
                 GameObject playerGo = GameObject.Find("Player");
+                if (playerGo == null) playerGo = GameObject.Find("PlayerManager");
                 if (playerGo != null) characterStats = playerGo.GetComponent<CharacterStats>();
             }
             else
@@ -34,7 +35,7 @@ public class HealthBarUI : MonoBehaviour
                 CharacterStats[] allStats = FindObjectsByType<CharacterStats>();
                 foreach (var stat in allStats)
                 {
-                    if (stat.gameObject.name != "Player")
+                    if (stat.gameObject.name != "Player" && stat.gameObject.name != "PlayerManager")
                     {
                         characterStats = stat;
                         break;

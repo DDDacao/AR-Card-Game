@@ -78,7 +78,7 @@ public class CardDragHandler : MonoBehaviour,IBeginDragHandler,IEndDragHandler,I
             if (Physics.Raycast(ray, out RaycastHit hit, 100f))
             {
                 CharacterStats hitStats = hit.collider.GetComponentInParent<CharacterStats>();
-                if (hitStats != null && hitStats.gameObject.name != "Player")
+                if (hitStats != null && hitStats.gameObject.name != "Player" && hitStats.gameObject.name != "PlayerManager")
                 {
                     targetEnemy = hitStats;
                     canExecute = true;
@@ -91,7 +91,7 @@ public class CardDragHandler : MonoBehaviour,IBeginDragHandler,IEndDragHandler,I
                 if (hit2D.collider != null)
                 {
                     CharacterStats hitStats = hit2D.collider.GetComponentInParent<CharacterStats>();
-                    if (hitStats != null && hitStats.gameObject.name != "Player")
+                    if (hitStats != null && hitStats.gameObject.name != "Player" && hitStats.gameObject.name != "PlayerManager")
                     {
                         targetEnemy = hitStats;
                         canExecute = true;
@@ -104,6 +104,7 @@ public class CardDragHandler : MonoBehaviour,IBeginDragHandler,IEndDragHandler,I
         {
             CharacterStats player = null;
             GameObject playerGo = GameObject.Find("Player");
+            if (playerGo == null) playerGo = GameObject.Find("PlayerManager");
             if (playerGo != null) player = playerGo.GetComponent<CharacterStats>();
 
             // 寻找发牌器，以便移出卡牌并重新排布
@@ -115,7 +116,7 @@ public class CardDragHandler : MonoBehaviour,IBeginDragHandler,IEndDragHandler,I
                 CharacterStats[] allStats = FindObjectsByType<CharacterStats>();
                 foreach (var stat in allStats)
                 {
-                    if (stat.gameObject.name != "Player")
+                    if (stat.gameObject.name != "Player" && stat.gameObject.name != "PlayerManager")
                     {
                         targetEnemy = stat;
                         break;

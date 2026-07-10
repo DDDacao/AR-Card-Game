@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96d08d58756fd4c41a476c41fbe78d35, type: 3}
   m_Name: defense
   m_EditorClassIdentifier: Assembly-CSharp::CardDataSO
-  cardName: defense
+  cardName: "\u9632\u5FA1"
   cardImage: {fileID: 21300000, guid: 3a28ac70669ed4f47924fd29938e7f4a, type: 3}
   cost: 1
   cardType: 1
-  description: defense 6 damega
+  description: "\u9632\u5FA16\u70B9\u4F24\u5BB3"
   effectValue: 6
   effectValue2: 0
