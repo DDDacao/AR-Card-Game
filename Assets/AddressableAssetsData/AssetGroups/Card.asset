@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Card
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Card
+  m_GUID: bd8917552c660b04687ac8821a62ff49
+  m_SerializeEntries:
+  - m_GUID: 0faf4abde39b479498344547f7a17390
+    m_Address: attack
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - CardData
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d3946fd7c98694e4bace7ae532758c59
+    m_Address: CardDataSO
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - CardData
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f703a503c8bce9a4ba16210786de1f77
+    m_Address: ring
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - CardData
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f7a72e243c332b14fb1c5753cdcebd4b
+    m_Address: hp
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - CardData
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 2a371dbcdca105744b93cc280e91d793, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 9e5bc77ae4ed9f64eb259f8383ef61b8, type: 2}
+    - {fileID: 11400000, guid: b1744e4d29925a14cb2ebcd96b2b8061, type: 2}
