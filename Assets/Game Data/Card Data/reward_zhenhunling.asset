@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: reward_zhenhunling
   m_EditorClassIdentifier: Assembly-CSharp::CardDataSO
   cardName: "\u9547\u9B42\u94C3"
-  cardImage: {fileID: 21300000, guid: 639cd9f76ccd84e70904b8eba30af0fb, type: 3}
+  cardImage: {fileID: 21300000, guid: 0ff7c4d46c467ad4ab397a2a3bc0c595, type: 3}
   cost: 1
   cardType: 4
-  description: "\u9020\u62103\u70B9\u4F24\u5BB3\uFF1B\u547D\u4E2D\u7D2B\u70B9\u53EF\u6253\u65AD"
+  description: "\u9020\u62103\u70B9\u4F24\u5BB3"
   effectValue: 3
   effectValue2: 0
+  specialEffect: 0
+  specialEffectValue: 0
   weaknessTag: 3

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: fire
   m_EditorClassIdentifier: Assembly-CSharp::CardDataSO
   cardName: "\u70C8\u706B\u7B26"
-  cardImage: {fileID: 21300000, guid: 639cd9f76ccd84e70904b8eba30af0fb, type: 3}
+  cardImage: {fileID: 21300000, guid: c38f5a983d41cc941acba917f3b6c4c7, type: 3}
   cost: 1
   cardType: 5
   description: "\u9020\u62104\u70B9\u4F24\u5BB3\uFF0C\u9644\u52A01\u5C42\u707C\u70E7"
