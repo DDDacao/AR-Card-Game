@@ -58,8 +58,9 @@ public class QTEManager : MonoBehaviour
 
         if (panelUI != null)
         {
-            panelUI.Show(requiredClicks, duration);
+            // 先绑回调再 Show，避免激活瞬间点击漏事件（极少见）
             panelUI.OnTap = RegisterClick;
+            panelUI.Show(requiredClicks, duration);
         }
         else
         {
