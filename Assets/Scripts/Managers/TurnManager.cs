@@ -106,7 +106,20 @@ public class TurnManager : MonoBehaviour
         if (StateMachine == null)
             StateMachine = new BattleStateMachine();
 
+        ResolveReferences();
+
+        // 先解析玩家引用，再挂受击反馈（避免绑定时 player 还是 null）
+        var dmgFx = PlayerDamageFeedback.EnsureExists();
+        if (dmgFx != null)
+            dmgFx.ForceRebind();
+
         StateMachine.TransitionTo(new BattleStateInit(this));
+
+        // Init 里会再 Resolve / 初始化数值，结束后再绑一次更稳
+        dmgFx = PlayerDamageFeedback.EnsureExists();
+        if (dmgFx != null)
+            dmgFx.ForceRebind();
+
         Debug.Log("[TurnManager] 战斗初始化（通过状态机启动）！");
     }
 

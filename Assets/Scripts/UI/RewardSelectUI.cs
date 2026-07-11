@@ -53,7 +53,9 @@ public class RewardSelectUI : MonoBehaviour
             var card = rewards[i];
             if (choiceLabels[i] != null)
             {
-                choiceLabels[i].text = card.cardName + "\n费" + card.cost + " · " + GetTypeName(card) + "\n" + card.description;
+                string label = card.cardName + "\n费" + card.cost + " · " + GetTypeName(card) + "\n" + card.description;
+                choiceLabels[i].text = label;
+                TmpChineseFontUtil.Apply(choiceLabels[i], label);
             }
 
             int idx = i;
@@ -112,16 +114,9 @@ public class RewardSelectUI : MonoBehaviour
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = new Color(0.95f, 0.92f, 0.88f);
         tmp.enableWordWrapping = true;
-        // 尝试中文字体
-        var fonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
-        for (int i = 0; i < fonts.Length; i++)
-        {
-            if (fonts[i].name == "ziti" || fonts[i].name == "2")
-            {
-                tmp.font = fonts[i];
-                break;
-            }
-        }
+        // 绑定中文字体并补齐动态图集缺字（避免奖励三选一乱码）
+        var cn = TmpChineseFontUtil.FindChineseFont();
+        if (cn != null) tmp.font = cn;
 
         choiceButtons.Add(btn);
         choiceLabels.Add(tmp);
@@ -137,6 +132,7 @@ public class RewardSelectUI : MonoBehaviour
             case CardType.Ability: return "技能";
             case CardType.ArmorBreak: return "破甲";
             case CardType.Seal: return "镇魂";
+            case CardType.Fire: return "火符";
             default: return c.cardType.ToString();
         }
     }

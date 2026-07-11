@@ -4,6 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 连续点击 QTE：默认 2 秒内点 3 次。
+/// 成功时：先播结果 UI，面板隐藏后再回调结算（跳字/闪色等）。
 /// </summary>
 public class QTEManager : MonoBehaviour
 {
@@ -23,6 +24,7 @@ public class QTEManager : MonoBehaviour
     private int currentClicks;
     private float timeLeft;
     private Coroutine runRoutine;
+    private Coroutine pendingCompleteRoutine;
 
     private void Awake()
     {
@@ -35,6 +37,7 @@ public class QTEManager : MonoBehaviour
 
     /// <summary>
     /// 开始 QTE。完成后回调 success。
+    /// 成功时回调会在结果界面关闭后触发。
     /// </summary>
     public void StartClickQTE(Action<bool> complete, float duration = -1f, int needClicks = -1)
     {
@@ -42,6 +45,12 @@ public class QTEManager : MonoBehaviour
         {
             Debug.LogWarning("[QTEManager] 已有 QTE 进行中，忽略新请求。");
             return;
+        }
+
+        if (pendingCompleteRoutine != null)
+        {
+            StopCoroutine(pendingCompleteRoutine);
+            pendingCompleteRoutine = null;
         }
 
         if (duration <= 0f) duration = defaultDuration;
@@ -58,7 +67,7 @@ public class QTEManager : MonoBehaviour
 
         if (panelUI != null)
         {
-            // 先绑回调再 Show，避免激活瞬间点击漏事件（极少见）
+            panelUI.OnHiddenAfterResult = null;
             panelUI.OnTap = RegisterClick;
             panelUI.Show(requiredClicks, duration);
         }
@@ -79,7 +88,10 @@ public class QTEManager : MonoBehaviour
 
         currentClicks++;
         if (panelUI != null)
+        {
             panelUI.SetProgress(currentClicks, requiredClicks, timeLeft);
+            panelUI.PlayClickFeedback(currentClicks, requiredClicks);
+        }
 
         if (currentClicks >= requiredClicks)
             Finish(true);
@@ -113,9 +125,29 @@ public class QTEManager : MonoBehaviour
         if (panelUI != null)
         {
             panelUI.OnTap = null;
-            panelUI.ShowResult(success);
-        }
 
+            if (success)
+            {
+                // 成功：等结果界面关闭后再结算伤害/跳字
+                panelUI.OnHiddenAfterResult = () => InvokeComplete(true);
+                panelUI.ShowResult(true);
+            }
+            else
+            {
+                // 失败：立刻结算（无强化跳字），界面可并行消失
+                panelUI.OnHiddenAfterResult = null;
+                panelUI.ShowResult(false);
+                InvokeComplete(false);
+            }
+        }
+        else
+        {
+            InvokeComplete(success);
+        }
+    }
+
+    private void InvokeComplete(bool success)
+    {
         var cb = onComplete;
         onComplete = null;
         cb?.Invoke(success);

@@ -2,7 +2,7 @@ using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// 参考图：右中提示 + 顶栏敌人名/意图
+/// 顶栏敌人名 / 意图 / 灼烧 + 右中提示
 /// </summary>
 public class BattleInfoUI : MonoBehaviour
 {
@@ -16,8 +16,13 @@ public class BattleInfoUI : MonoBehaviour
     public TextMeshProUGUI enemyIntentText;
     public TextMeshProUGUI enemyNameText;
 
+    [Header("状态（可选，无则不显示）")]
+    public TextMeshProUGUI enemyBurnText;
+
     [Header("默认文案")]
     public string enemyDisplayName = "小妖";
+
+    private CharacterStats boundEnemy;
 
     private void Start()
     {
@@ -46,11 +51,7 @@ public class BattleInfoUI : MonoBehaviour
             turnManager.OnEnemyTurnStarted += Refresh;
         }
 
-        if (enemyStats != null)
-        {
-            enemyStats.OnBurnChanged -= OnEnemyBurnChanged;
-            enemyStats.OnBurnChanged += OnEnemyBurnChanged;
-        }
+        RebindEnemyEvents();
 
         if (enemyNameText != null)
             enemyNameText.text = enemyDisplayName;
@@ -67,14 +68,33 @@ public class BattleInfoUI : MonoBehaviour
             turnManager.OnPlayerTurnStarted -= Refresh;
             turnManager.OnEnemyTurnStarted -= Refresh;
         }
-        if (enemyStats != null)
-            enemyStats.OnBurnChanged -= OnEnemyBurnChanged;
+        UnbindEnemyEvents();
     }
 
     private void Update()
     {
         if (deckCountText != null && cardDeck != null)
             deckCountText.text = $"符匣剩余：{cardDeck.DrawDeckCount}";
+    }
+
+    private void RebindEnemyEvents()
+    {
+        if (turnManager != null && turnManager.enemyStats != null)
+            enemyStats = turnManager.enemyStats;
+
+        if (boundEnemy == enemyStats) return;
+
+        UnbindEnemyEvents();
+        boundEnemy = enemyStats;
+        if (boundEnemy != null)
+            boundEnemy.OnBurnChanged += OnEnemyBurnChanged;
+    }
+
+    private void UnbindEnemyEvents()
+    {
+        if (boundEnemy != null)
+            boundEnemy.OnBurnChanged -= OnEnemyBurnChanged;
+        boundEnemy = null;
     }
 
     private void OnEnemyBurnChanged(int _)
@@ -86,6 +106,8 @@ public class BattleInfoUI : MonoBehaviour
     {
         if (turnManager == null) return;
 
+        RebindEnemyEvents();
+
         if (turnText != null)
         {
             turnText.text = turnManager.IsBattleActive
@@ -96,18 +118,25 @@ public class BattleInfoUI : MonoBehaviour
         if (deckCountText != null && cardDeck != null)
             deckCountText.text = $"符匣剩余：{cardDeck.DrawDeckCount}";
 
+        // 意图：只显示意图本身，不夹带状态标签
         if (enemyIntentText != null)
         {
+            enemyIntentText.richText = true;
             string intent = string.IsNullOrEmpty(turnManager.CurrentEnemyIntent)
                 ? "—"
                 : turnManager.CurrentEnemyIntent;
-            enemyIntentText.text = enemyStats != null && enemyStats.BurnStacks > 0
-                ? $"{intent}\n<color=#FF8A33>灼烧 {enemyStats.BurnStacks} 层</color>"
-                : intent;
+            enemyIntentText.text = intent;
+            TmpChineseFontUtil.Apply(enemyIntentText, intent);
         }
 
+        // 灼烧：独立一行，用颜色属性而不是把 <color> 当字符串硬塞
+        RefreshBurnText();
+
         if (enemyNameText != null && !string.IsNullOrEmpty(enemyDisplayName))
+        {
             enemyNameText.text = enemyDisplayName;
+            TmpChineseFontUtil.Apply(enemyNameText, enemyDisplayName);
+        }
 
         if (hintText != null)
         {
@@ -117,6 +146,28 @@ public class BattleInfoUI : MonoBehaviour
                 hintText.text = "拖出符咒攻击或防御\n点击结束回合";
             else
                 hintText.text = "妖怪行动中…";
+            TmpChineseFontUtil.Apply(hintText, hintText.text);
+        }
+    }
+
+    private void RefreshBurnText()
+    {
+        if (enemyBurnText == null) return;
+
+        int stacks = enemyStats != null ? enemyStats.BurnStacks : 0;
+        if (stacks > 0)
+        {
+            enemyBurnText.gameObject.SetActive(true);
+            enemyBurnText.richText = false;
+            enemyBurnText.color = new Color(1f, 0.55f, 0.22f, 1f);
+            string s = $"灼烧 {stacks} 层";
+            enemyBurnText.text = s;
+            TmpChineseFontUtil.Apply(enemyBurnText, s);
+        }
+        else
+        {
+            enemyBurnText.text = "";
+            enemyBurnText.gameObject.SetActive(false);
         }
     }
 }

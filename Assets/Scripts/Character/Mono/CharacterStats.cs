@@ -16,6 +16,8 @@ public class CharacterStats : MonoBehaviour
     public event Action<int, int> OnEnergyChanged; // (current, max)
     public event Action<int> OnArmorChanged; // (current)
     public event Action<int> OnBurnChanged; // (stacks)
+    /// <summary>受到一次攻击结算时触发（入参为原始伤害，含被护甲挡掉的部分）。</summary>
+    public event Action<int> OnTookHit;
 
     public int CurrentHP => currentHP;
     public int MaxHP => templateData != null ? templateData.maxHP : 0;
@@ -55,6 +57,8 @@ public class CharacterStats : MonoBehaviour
     {
         if (damage <= 0) return;
 
+        int incoming = damage;
+
         // 如果有护甲，优先扣除护甲
         if (currentArmor > 0)
         {
@@ -82,6 +86,27 @@ public class CharacterStats : MonoBehaviour
                 Die();
             }
         }
+
+        // 无论是否被护甲完全挡下，都通知受击反馈（震动/红闪等）
+        if (OnTookHit != null)
+        {
+            OnTookHit.Invoke(incoming);
+        }
+        else if (IsPlayerStats())
+        {
+            // 双保险：反馈器尚未订阅时，仍直接播 UI 反馈
+            var fx = PlayerDamageFeedback.Instance != null
+                ? PlayerDamageFeedback.Instance
+                : PlayerDamageFeedback.EnsureExists();
+            if (fx != null)
+                fx.Play(incoming);
+        }
+    }
+
+    private bool IsPlayerStats()
+    {
+        string n = gameObject.name;
+        return n == "Player" || n == "PlayerManager";
     }
 
     public void Heal(int amount)

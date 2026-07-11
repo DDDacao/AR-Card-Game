@@ -161,7 +161,8 @@ public static class SetupMultiWeakness
         sc.isTrigger = false;
         var wp = go.AddComponent<WeaknessPoint>();
         wp.weaknessType = type;
-        wp.markerScale = 0.48f;
+        wp.visualCoreScale = 0.1f;
+        wp.hitRadius = 0.62f;
         wp.owner = enemy.GetComponent<CharacterStats>();
         wp.showMarker = true;
     }

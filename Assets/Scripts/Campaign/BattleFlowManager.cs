@@ -294,8 +294,14 @@ public class BattleFlowManager : MonoBehaviour
 
             var animator = monsterInst.GetComponent<Animator>();
             animBridge.BindTargetAnimator(animator, prefab.name);
+
+            // 5. 弱点锚点（小妖翅膀等）
+            WeaknessAnchorSetup.ApplyForStage(enemyGo, monsterInst, stageIndex);
         }
         else
+        {
             Debug.LogWarning($"[BattleFlow] 第 {stageIndex + 1} 关未绑定怪物预制体，保留原模型。");
+            WeaknessAnchorSetup.ApplyForStage(enemyGo, null, stageIndex);
+        }
     }
 }

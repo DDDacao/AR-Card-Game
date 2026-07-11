@@ -40,11 +40,21 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         if (cardSprite != null)
             cardSprite.sprite = data.cardImage;
         if (costText != null)
+        {
             costText.text = data.cost.ToString();
+            TmpChineseFontUtil.Apply(costText, costText.text);
+        }
         if (descriptionText != null)
+        {
             descriptionText.text = data.description;
+            TmpChineseFontUtil.Apply(descriptionText, data.description);
+        }
         if (typeText != null)
-            typeText.text = GetTypeLabel(data.cardType);
+        {
+            string label = GetTypeLabel(data.cardType);
+            typeText.text = label;
+            TmpChineseFontUtil.Apply(typeText, label);
+        }
     }
 
     private static string GetTypeLabel(CardType type)

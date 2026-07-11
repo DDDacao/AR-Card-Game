@@ -1,9 +1,10 @@
 # AR封妖牌局 — PROJECT_SUMMARY（交接用）
 
 > **用途**：新对话 / 新同学接入时先读本文件。  
-> **更新日期**：2026-07-11（已完成 Boss 模型/动画合并）
+> **更新日期**：2026-07-11（QTE 镇魂铃 / 受击反馈 / 弱点光球迭代中；**即将与同伴合并后再继续改弱点**）  
 > **策划案**：根目录 `AR封妖牌局_第一版玩法策划案.docx`  
-> **UI 参考**：根目录 `UI设计参考图.png`（横屏简易 HUD）
+> **UI 参考**：根目录 `UI设计参考图.png`（横屏简易 HUD）  
+> **铃铛图**：`Assets/_ARSealCardGame/Art/UI/QTE/bell.png`（由根目录 `铃铛.png` 导入）
 
 ---
 
@@ -14,13 +15,15 @@
 ```text
 请先读 F:\AR-Card-Game\PROJECT_SUMMARY.md，从「## 下一步必须做什么」开始继续开发。
 工程是 Unity 6 + Vuforia AR 卡牌。场景 SampleScene。可用菜单 AR封妖/* 一键重配。
+当前优先：同伴合并后，继续打磨第 1 关小妖弱点（光球位置/粒子/瞄准反馈）。
 ```
 
 若要做某一具体项，直接点名，例如：
 
-- 「做灼烧 DoT 和烈火符」
-- 「真机改为识别成功后再开战」
-- 「Boss 山鬼换模型和多阶段」
+- 「继续调小妖红弱点翅膀位置和 hitRadius」
+- 「给第 2/3 关也做弱点锚点」
+- 「真机全流程回归」
+- 「玩家受击加手机震动」
 
 ---
 
@@ -38,18 +41,21 @@
 |------|------|------|
 | 双相机手牌 | ✅ | ARCamera Base + CardCamera Overlay，`Card` 层 |
 | 出牌交互 | ✅ | 指向牌箭头+射线；防/技能上拖；灵气不足回弹 |
-| 符匣固定顺序 | ✅ | `FuXiaOrderSO`，不洗牌；开局 4 / 每回补 2 / 上限 6；奖励按关卡指定的基础抽牌节点插入；用后本场消耗 |
-| 三色弱点 + QTE | ✅ | 红/黄/紫；命中匹配弱点 → 2 秒点 3 次；成功加伤/破甲/打断蓄力；QTE 中禁止继续出牌 |
-| 敌人意图 | ✅ | 攻击→防御→蓄力（关卡可覆写）；只亮对应弱点 |
-| 横屏 HUD | ✅ | 顶敌人、右上玩家、右中提示、右下结束回合；手牌 scale≈0.45 |
-| 三关战役 | ✅ | 小妖→奖励→石灵→奖励→山鬼；失败重试本关 |
-| 三关 Boss 模型与状态机 | ✅ | 已合并三套怪物预制体、Animator Controller 与 FSM；`BattleFlowManager` 运行时按关卡实例化对应模型，Android 构建也可用 |
-| 奖励三选一 | ✅ | `RewardSelectUI`；奖励按策划指定回合插入后续符匣，不再一律置顶 |
-| 手机 AR 识别 | ✅ | 用户已验证扫图可用；Editor 用 `BattleBootstrap.skipARForEditor` 跳过 |
-| 开始界面与开场动画 | ✅ | 场景保留唯一 `PF_StartIntro`；120 帧序列播放完成后才调用 `BattleBootstrap.BeginBattle()` 进入战役 |
-| 灼烧构筑 | ✅ | 基础烈火符附加 1 层灼烧；奖励炼火符附加 2 层；敌方行动结束后每层扣 1 HP；奖励引火诀按每层 3 伤引爆并清空层数 |
+| 符匣固定顺序 | ✅ | `FuXiaOrderSO`，不洗牌；开局 4 / 每回补 2 / 上限 6；奖励按关卡节点插入 |
+| 三色弱点 + QTE | ✅→🔧 | 逻辑可用；**视觉已改为柔光小球+粒子（进行中，见 §7.1 / §8）** |
+| 镇魂铃 QTE UI | ✅ | 全屏压暗 + 居中大铃铛；2 秒点 3 次；第三击收定波纹；成功后 UI 关闭再结算 |
+| 伤害跳字 | ✅ | `DamagePopup` 世界空间数字；QTE 成功金色更大 |
+| 怪物弱点色闪 | ✅ | `MonsterHitFlash`：QTE 成功结算时身体淡红/黄/紫闪 |
+| 玩家受击反馈 | ✅ | `PlayerDamageFeedback`：HUD 抖动 + 全屏红闪（电脑可测） |
+| 敌人意图 | ✅ | 攻击→防御→蓄力；只亮对应弱点 |
+| 横屏 HUD | ✅ | 顶敌人（名/血/意图/**独立灼烧行**）、右上玩家、右中提示、右下结束回合 |
+| 三关战役 + Boss 模型 | ✅ | 运行时 `ActiveMonster` 换皮；编辑器仍见 Ellen 占位属正常 |
+| 奖励三选一 | ✅ | 中文字体图集已补；优先字体 `2`/`3` |
+| 灼烧构筑 | ✅ | 烈火 1 层 / 炼火 2 层；敌方行动后每层 1 伤；引火诀引爆 |
+| 开始界面 | ✅ | 唯一 `PF_StartIntro`；动画完再开战 |
+| 手机 AR | ✅ | 用户已验证扫图；Editor `skipARForEditor` |
 
-**相对策划案仍缺**：精准 QTE、Boss 多阶段、更丰富封印演出、真机「未识别不开战」门闩（可选）。
+**相对策划案仍缺**：精准 QTE、Boss 多阶段、更丰富封印演出、真机「未识别不开战」门闩（可选）、弱点三关精修、受击音效/手机震动。
 
 ---
 
@@ -60,9 +66,9 @@
 ```
 开始界面(PF_StartIntro，播放完毕)
   → BattleBootstrap.BeginBattle() → BattleFlowManager.StartCampaign()
-  → 第1关 小妖(24HP) → 奖励三选一
-  → 第2关 石灵(32HP/开局6甲) → 奖励三选一
-  → 第3关 山鬼(55HP) → 全通关
+  → 第1关 小妖(24HP) Vespomorph → 奖励三选一
+  → 第2关 石灵(32HP/开局6甲) Cavecrawler → 奖励三选一
+  → 第3关 山鬼(55HP) Drackmahre → 全通关
 失败 → 重试本关
 ```
 
@@ -74,30 +80,28 @@
 | 关卡 | `Stage_01_XiaoYao` / `Stage_02_ShiLing` / `Stage_03_ShanGui` |
 | 敌人数值 | `enemy_xiaoyao` / `enemy_shiling` / `enemy_shangui` |
 | 符匣 | `Card Library/FuXia_XiaoYao|ShiLing|ShanGui.asset` |
-| 基础牌 | `Card Data/attack(斩妖)` `defense(护身)` `break(破煞)` `fire(烈火)` `seal(镇魂)` `hp(聚气)` |
+| 基础牌 | `attack/defense/break/fire/seal/hp` |
 | 奖励牌 | `reward_lianzhan/lianhuo/zhenhunling/pozhen/yinhuo/dinghun` |
 | 玩家 | `player.asset`（50HP / 3 灵气） |
-| 三关怪物预制体 | `Assets/fbx/monsters/1/Prefabs/Vespomorph.prefab`、`2/Prefabs/Cavecrawler.prefab`、`3/Prefabs/Drackmahre.prefab` |
+| 怪物预制体 | `fbx/monsters/1/Prefabs/Vespomorph`、`2/Cavecrawler`、`3/Drackmahre` |
+| QTE 美术 | `Assets/_ARSealCardGame/Art/UI/QTE/bell.png`、`ripple_ring.png` |
+| 中文字体 | `Assets/Scripts/Utilities/2.asset`、`3.asset`、`ziti.asset`（ziti fallback→2） |
 
-### 3.3 已验证的固定补牌顺序（策划案 V1.0）
+### 3.3 固定补牌顺序（策划案 V1.0）
 
 - **小妖**：开局 `斩、斩、护、聚`；第 2 回合 `斩、烈火`；第 3 回合 `护、斩`。
 - **石灵**：开局 `破、斩、护、聚`；第 2 回合 `斩、烈火`；第 3 回合 `护、斩`；第 4 回合 `奖励 1、斩`。
 - **山鬼**：开局 `镇、斩、护、奖励 1`；第 2 回合 `破、斩`；第 3 回合 `奖励 2、聚`；第 4 回合 `烈火、护`。
 
-`CardDeck` 以“已抽基础牌数”为节点插入奖励，保证奖励卡不会错误地全塞到开局。
+### 3.4 卡牌类型
 
-### 3.4 卡牌类型（`CardType`）
-
-`Attack` | `Defense` | `Ability` | `ArmorBreak` | `Seal` | `Fire`
-
-弱点标签 `WeaknessType`：`RedAttack` / `YellowArmor` / `PurpleSeal`  
-（`CardDataSO.ResolveWeaknessTag()` 可按类型推断）
+`Attack` | `Defense` | `Ability` | `ArmorBreak` | `Seal` | `Fire`  
+弱点：`RedAttack` / `YellowArmor` / `PurpleSeal`
 
 ### 3.5 指向牌 vs 上拖牌
 
-- **箭头指向**：Attack / ArmorBreak / Seal / Fire（`IsTargetedCard()`）
-- **上拖打出**：Defense / Ability
+- **箭头指向**：Attack / ArmorBreak / Seal / Fire  
+- **上拖打出**：Defense / Ability  
 
 ---
 
@@ -106,59 +110,60 @@
 ```
 BattleBootstrap.BeginBattle()
   └─ BattleFlowManager.StartCampaign()
-       └─ ApplyStageToBattle(stage)  // 敌人SO、符匣、意图、显示名、按关卡换怪物预制体
-       └─ TurnManager.StartBattle()  // 进入 BattleStateMachine，抽开局手牌、展示意图/弱点
+       └─ ApplyStageToBattle
+            ├─ SwapMonsterModel → ActiveMonster 实例化
+            ├─ WeaknessAnchorSetup.ApplyForStage  // 弱点锚骨骼（先做了第1关）
+            └─ TurnManager.StartBattle()
+                 └─ PlayerDamageFeedback.EnsureExists()
 
 玩家出牌 CardDragHandler
+  ├─ 拖动中 UpdateWeaknessAim → WeaknessPoint.SetAimed 高亮
   └─ RaycastAll 优先 WeaknessPoint
-  └─ CardManager.ExecuteCard(..., hitWeakness, wp)
-       └─ 匹配弱点 → QTEManager → 结算伤害/破甲/打断
+       └─ CardManager.ExecuteCard
+            └─ 匹配弱点 → QTEManager.StartClickQTE
+                 ├─ 成功：等 HUD_QTE 关闭 → 伤害/跳字/MonsterHitFlash
+                 └─ 失败：立刻结算普通伤害
 
-结束回合 TurnManager.EndPlayerTurn
-  └─ BattleStateEnemyTurn.EnemyActionFlow()
-       └─ EnemyIntentController.ExecuteAndAdvance(player)
-       └─ enemyStats.ResolveBurnAtTurnEnd()  // 灼烧在敌方行动后结算
-  └─ 下一玩家回合 PresentIntent（换弱点）
+敌人攻击 player.TakeDamage
+  └─ OnTookHit → PlayerDamageFeedback（HUD 抖 + 红闪）
 
-胜负 TurnManager.OnBattleEnded
-  └─ BattleFlowManager：奖励 UI / 下一关 / 全通 / 重试
+结束回合 → EnemyActionFlow → 灼烧结算 → 下回合 PresentIntent
 ```
 
 ---
 
-## 5. 关键脚本地图
+## 5. 关键脚本地图（新增标 ⭐）
 
 ```
 Assets/Scripts/
   Campaign/
-    BattleFlowManager.cs   # 三关 + 奖励流转
-    BattleStageSO.cs
-    CampaignSO.cs
-  Card/
-    Mono/ Card.cs, CardDeck.cs, CardDragHandler.cs, CardArrow.cs
-    SO/   CardDataSO.cs, CardLibrarySO.cs, FuXiaOrderSO.cs
-  Character/
-    Mono/ CharacterStats.cs, WeaknessPoint.cs, EnemyIntentController.cs, MonsterAnimationBridge.cs
-    SO/   CharacterDataSO.cs
+    BattleFlowManager.cs      # 三关 + 换模 + 调 WeaknessAnchorSetup
+  Character/Mono/
+    WeaknessPoint.cs          # ⭐ 光芯+粒子+大判定+瞄准高亮+跟随骨骼
+    WeaknessAnchorSetup.cs    # ⭐ 第1关红弱点绑 Vespomorph 右翅
+    CharacterStats.cs         # OnTookHit 受击事件
+    EnemyIntentController.cs
+    MonsterAnimationBridge.cs
   Combat/
-    QTEManager.cs
-  Managers/
-    TurnManager.cs, CardManager.cs, BattleBootstrap.cs
-    CardCameraManager.cs, CardLayoutManager.cs
+    QTEManager.cs             # 成功回调延后到面板隐藏后
+  Card/Mono/
+    CardDragHandler.cs        # ⭐ 拖动时弱点瞄准反馈
   UI/
-    PlayerStatusUI, BattleInfoUI, BattleResultUI, HealthBarUI
-    QTEPanelUI, RewardSelectUI
+    QTEPanelUI.cs             # 镇魂铃抖动/波纹/第三击收定
+    DamagePopup.cs            # ⭐ 伤害跳字
+    MonsterHitFlash.cs        # ⭐ QTE 成功身体闪色
+    PlayerDamageFeedback.cs   # ⭐ 玩家受击 HUD 抖+红闪
+    BattleInfoUI.cs           # ⭐ 灼烧独立行（勿把 <color> 塞意图文本）
+    RewardSelectUI.cs
   Utilities/
-    Enums.cs, PoolTool.cs, CardTranfrom.cs
-  FSM/
-    BattleStateMachine.cs, BattleStates.cs, IBattleState.cs
-  EllenARController.cs     # 动画按钮测试，非核心战斗
+    TmpChineseFontUtil.cs     # ⭐ 动态补字；优先字体 2/3
+  Managers/
+    TurnManager.cs / CardManager.cs / BattleBootstrap.cs
 
-Assets/_ARSealCardGame/
-  Prefabs/PF_StartIntro.prefab
-  Scripts/UI/StartIntroController.cs  # 开始界面、帧序列与完成事件
-
-Assets/Editor/             # 一键配置菜单（见下）
+Assets/Editor/
+  SetupWeaknessAndQTE.cs      # 重建镇魂铃 QTE：AR封妖/重建镇魂铃QTE界面
+  BuildBattleHud.cs           # + AR封妖/修复敌人状态UI布局
+  RebuildChineseFonts.cs      # AR封妖/重建中文字体图集（修复乱码）
 ```
 
 ---
@@ -167,109 +172,150 @@ Assets/Editor/             # 一键配置菜单（见下）
 
 | 菜单 | 作用 |
 |------|------|
-| `AR封妖/重建战斗HUD（横屏）` | 按参考图重建 Canvas HUD |
-| `AR封妖/配置弱点与QTE` | 红弱点 + QTE 面板 + QTEManager |
-| `AR封妖/配置多弱点与新符咒` | 三色弱点 + 破煞/镇魂 + 牌库数量 |
-| `AR封妖/配置符匣固定顺序` | 生成/绑定 `FuXia_XiaoYao` |
-| `AR封妖/配置三关战役` | 战役 SO + 三关符匣/奖励 + BattleFlowManager + 奖励 UI |
+| `AR封妖/重建战斗HUD（横屏）` | 整套 HUD（慎用，会清子物体） |
+| `AR封妖/修复敌人状态UI布局` | 只加高敌人顶栏 + 独立灼烧行 |
+| `AR封妖/配置弱点与QTE` | 弱点+QTE（会清弱点，慎用） |
+| `AR封妖/重建镇魂铃QTE界面` | **只重建 QTE**，不碰弱点 |
+| `AR封妖/配置多弱点与新符咒` | 三色弱点 |
+| `AR封妖/配置三关战役` | 战役 SO + BattleFlowManager |
+| `AR封妖/重建中文字体图集（修复乱码）` | 把玩法汉字烘焙进 TMP 2/3/ziti |
 
-**场景里应有**：`ARCamera`、`ImageTarget`、`Ellen_skin (2)`（含 CharacterStats + 三弱点 + EnemyIntentController）、`CardManager`/`CardDeck`/`TurnManager`、`BattleBootstrap`、`BattleFlowManager`、`Canvas`（含 HUD_* / HUD_QTE / HUD_Reward）、`QTEManager`。
+**场景应有**：`ARCamera`、`ImageTarget`、`Ellen_skin (2)`（逻辑宿主 + 三 WeaknessPoint + Intent）、`BattleFlowManager`（三预制体引用）、`Canvas`（HUD_* / HUD_QTE / HUD_Reward / HUD_DamageFlash 运行时生成）、`QTEManager`。
+
+**编辑器 vs 真机模型**：场景里永久是 Ellen 占位；Play/真机开战由 `SwapMonsterModel` 挂 `ActiveMonster`。属设计如此，不是漏换模。
 
 ---
 
 ## 7. 已知问题 / 注意点
 
-1. **弱点射线**：必须用 `RaycastAll` 并优先 `WeaknessPoint`（身体 BoxCollider 会挡单次 Raycast）——已在 `CardDragHandler` 处理。  
-2. **QTE 时**：禁止出牌、禁止结束回合。  
-3. **胜负 UI**：有 `BattleFlowManager` 时由流程接管，不要只依赖默认「再战一次」。  
-4. **奖励 UI**：`RewardSelectUI` 与 `HUD_Reward` 需激活且置顶；`BattleFlowManager.Awake` 里 Subscribe 避免漏事件。  
-5. **手牌大小**：`CardDeck.handCardScale` 当前约 **0.45**，可在 Inspector 调。  
-6. **Editor Vuforia**：Webcam / stream 警告可忽略；真机识别用户已确认 OK。  
-7. **敌人模型**：`BattleFlowManager` 的三套怪物预制体已在 `SampleScene` 绑定；不得改回仅在 `UNITY_EDITOR` 中用 `AssetDatabase` 加载，否则 Android 包不会出现模型。
-8. **开始界面**：场景中只能保留一个 `PF_StartIntro`。`BattleBootstrap` 会自动订阅其 `IntroFinished` 事件；重复实例会导致动画需要点两次。
-9. **灼烧结算**：当前在敌人行动完成后结算，每层 1 点伤害；引火诀会清空现有层数并按每层 3 点伤害引爆。
-10. **策划卡牌分工**：烈火符是基础 10 牌中的火符；炼火符和引火诀分别是第一、第二次奖励池中的火符构筑牌。不要把三者合并或把引火诀当破甲牌。
+### 7.1 弱点（进行中 — 合并后再继续）
+
+1. **已做**：`WeaknessPoint` 小光芯 + 粒子；**大 `hitRadius`（约 0.62–0.68）** 易点中；拖牌瞄准 `SetAimed` 变亮；第 1 关红弱点尝试跟随 `Vespomorph_WingRightA`。  
+2. **用户反馈仍有问题**（合并后优先修）：位置/亮度/粒子/跟随偏移等需再调；黄/紫与第 2/3 关锚点未精修。  
+3. 调参入口：  
+   - `WeaknessPoint.visualCoreScale` / `hitRadius` / `glowParticleSize`  
+   - `WeaknessAnchorSetup.SetupXiaoYao` 里 `BindFollow(wing, localOffset)`  
+4. 射线：`CardDragHandler.ResolveAttackTarget` 必须 `RaycastAll` 优先弱点。
+
+### 7.2 其它注意
+
+5. **QTE 成功结算时机**：结果 UI 关闭后才跳字/扣血/闪色（`QTEPanelUI.OnHiddenAfterResult`）。  
+6. **QTE 首次显示**：`QTEPanelUI.Awake` 禁止 `HideImmediate`（否则第一次不弹面板）。  
+7. **敌人状态灼烧**：必须用独立 `enemyBurnText`，禁止 `intent + "<color>…"` 字符串（会显示标签原文）。  
+8. **中文乱码**：TMP 图集缺字；跑「重建中文字体图集」；优先用字体资产 `2`/`3`；`ziti` 已 fallback 到 `2`。  
+9. **红闪 Image 必须有 Sprite**：`PlayerDamageFeedback` 用白贴图生成 Sprite，否则电脑上看不见闪。  
+10. **模型**：三预制体序列化在 `BattleFlowManager`；禁止改回仅 Editor 的 AssetDatabase 加载。  
+11. **开始界面**：仅一个 `PF_StartIntro`。  
+12. **灼烧**：敌方行动后结算；引火诀引爆清层。
 
 ---
 
 ## 8. 下一步必须做什么（按优先级）
 
-### P0 — 下一条对话优先做（真机验收）
+### P0 — 合并后立刻继续（当前主线）
 
-**A. 真机全流程回归 + 可选「识别后开战」**（约 0.5–1 天）
+**弱点打磨（用户明确：合并后再改）**
 
-- [ ] 手机：扫图 → 三关 → 两次奖励 → 山鬼全通 / 失败重试  
-- [ ] 可选：`BattleBootstrap` 真机关闭 `autoStartIfNoAR`，仅 `OnTargetFound` 时 `BeginBattle()`  
-- [ ] 记：弱点位置、UI 安全区、结束回合与手牌是否挡操作  
+- [ ] 与同伴合并分支，解决冲突后回归 Play  
+- [ ] 第 1 关红弱点：翅膀位置、`followLocalOffset`、粒子强度、瞄准反馈手感  
+- [ ] 确认「看起来小、判定大」在真机/电脑都好点  
+- [ ] 通过后：黄/紫锚点；第 2 关石灵 / 第 3 关山鬼 `WeaknessAnchorSetup`  
 
-### P1 — 内容与表现
+### P0 — 发布向
 
-**C. Boss 差异化（模型与基础动画已完成）**
+**A. 真机全流程回归**
 
-- [x] 小妖、石灵、山鬼独立模型与 Animator Controller
-- [ ] 验证怪物受击、死亡、攻击动画是否和战斗事件逐一对应
-- [ ] 蓄力更狠的演出；打断成功反馈  
-- [ ] （可选）Boss 第二阶段意图表  
+- [ ] 扫图 → 三关 → 两次奖励 → 全通 / 失败重试  
+- [ ] 弱点位置、UI 安全区、结束回合  
+- [ ] 三关模型与受击/死亡动画  
 
-**D. 动画与反馈**
+### P1 — 表现
 
-- [ ] 受击/死亡接 `EllenARController` 或 Animator  
-- [ ] QTE 成功/失败特效与音效  
-- [ ] 弱点点更明显（描边/脉冲）  
+- [ ] 玩家受击：手机 `Handheld.Vibrate`（可选）  
+- [ ] QTE 音效；重击碎屏（可选）  
+- [ ] 怪物攻击/受击/死亡动画对齐战斗事件  
 
-### P2 — 策划案剩余
+### P2 — 策划剩余
 
-- [ ] 精准点击 QTE（圆环）  
-- [ ] 更完整基础 10 牌数值与三关符匣手感调参  
-- [ ] 连斩「本回合已出过攻击则额外伤害」条件效果  
+- [ ] 精准圆环 QTE  
+- [ ] 连斩条件效果  
+- [ ] Boss 多阶段  
 
 ---
 
 ## 9. 建议的下一条任务（直接开干用）
 
-**首选（发布/演示）：**
+**首选（合并完成后）：**
 
-> 真机全流程回归：开始界面单次点击 → 开场动画 → 扫图 → 三关 → 两次奖励 → 山鬼全通 / 失败重试；记录弱点位置、UI 安全区、结束回合与手牌是否挡操作。额外核验三关切换时是否出现各自模型，以及攻击/受击/死亡动画是否正确切换。
+> 继续优化弱点：在第 1 关小妖上调红弱点翅膀附着点与 hitRadius/光效；拖斩妖符瞄准时应明显变亮；确认 QTE 仍易触发。满意后再做黄/紫与其它关。
 
-**次选（发布/演示）：**
+**次选（发布）：**
 
-> 真机门闩：开始界面完成且 ImageTarget 识别成功后才开战；Editor 保留 skipAR；避免开场动画结束时绕过识别门槛。
+> 真机全流程回归 + 记录问题清单。
 
-**再次选（表现）：**
+**再次选：**
 
-> 出牌/QTE/死亡动画与简单特效，提升演示观感。
+> 玩家受击加短震动；QTE 成功/失败音效。
 
 ---
 
 ## 10. 快速自测清单（改完必过）
 
-1. Play：显示一次开始界面；单次点击播放动画，结束后才进入第 1 关；开局 4 张（斩斩护聚一类教学序），符匣剩余正确。
-2. 红/黄/紫意图切换时只有对应弱点亮。  
-3. 指向匹配弱点 → QTE → 成功加伤/破甲/打断；QTE 未结束时不可继续出牌。
-4. 击杀小妖 → 奖励三选一 → 石灵 32HP/有甲。  
-5. 击杀石灵 → 再选奖励 → 山鬼 55HP。  
-6. 失败 → 重试本关；全通 → 再来一局。  
-7. 烈火符叠 1 层、炼火符叠 2 层灼烧；敌方行动后每层各扣 1 HP；引火诀每层引爆 3 点伤害并清空层数。
-8. 手牌不过大、结束回合可点、中文不大量缺字。
+1. 开始界面一次点击 → 动画完进第 1 关；开局 4 张序正确。  
+2. 小妖模型为 Vespomorph；红弱点在翅膀附近（非巨大粗糙球）。  
+3. 拖斩妖符对准弱点：光球变亮 → 松手 QTE 铃铛 → 成功后 UI 消失再跳字/闪色。  
+4. 结束回合若敌人攻击：HUD 抖 + 红闪。  
+5. 叠灼烧后顶栏独立显示「灼烧 n 层」，无 `<color=` 字样。  
+6. 奖励三选一中文无大量方框。  
+7. 三关切换模型；失败重试；全通。  
+8. 烈火/炼火/引火灼烧逻辑正确。
 
 ---
 
 ## 11. 技术备忘
 
-* Unity 6：查找用 `FindObjectsByType` / `FindAnyObjectByType`（无旧 API）。  
-* Grok 若用 Unity MCP：`~/.grok/config.toml` 中 `[mcp_servers.unity-mcp]` → `http://localhost:8080/mcp`；Unity 需开 MCP Bridge。  
-* 策划原文提取可用 pandoc/python 读 docx；本摘要已覆盖实现范围。  
+* Unity 6：`FindObjectsByType` / `FindAnyObjectByType`。  
+* Grok + Unity MCP：`http://localhost:8080/mcp`；Unity 开 MCP Bridge。  
+* DOTween：UI `DOShakeAnchorPos`、`Image.DOColor`（Image 需 Sprite）。  
+* TMP 动态字体：`atlasPopulationMode=Dynamic` + `isMultiAtlasTexturesEnabled`；毛笔字体本身可能缺字，靠 fallback。
 
 ---
 
-**交接结论**：核心玩法闭环（开始界面 + 符匣 + 意图弱点 + QTE + 灼烧构筑 + 三关奖励）已可演示。新聊天请从 **§8 / §9** 选一条任务开干；优先 **真机全流程回归**，再做 **Boss 差异化**。
+## 12. Git / 合并说明
+
+### 12.1 历史合并（Boss 模型，2026-07-11）
+
+- 分支 `codex/pre-boss-merge-20260711` 曾合并 `origin/master`（0.4）。  
+- 合并提交参考：`8b2e89f`；此前安全点：`0ae1457`。  
+
+### 12.2 当前状态（请用户本地确认）
+
+- 本轮新增大量表现向改动（QTE 铃铛、跳字、受击反馈、弱点光球、字体工具、HUD 灼烧行等），**用户准备与同伴再合并**。  
+- **合并后再继续改弱点**——不要在冲突未解决时大幅重调 `WeaknessAnchorSetup` 坐标。  
+- 合并时易冲突文件（注意保留双方意图）：  
+  - `PROJECT_SUMMARY.md`（以本文件为功能真相源，合并后可再对一次）  
+  - `SampleScene.unity`（HUD / QTE / 弱点引用）  
+  - `BattleFlowManager.cs`、`CardDragHandler.cs`、`WeaknessPoint.cs`  
+  - `QTEPanelUI.cs` / `QTEManager.cs` / `CharacterStats.cs`  
+  - 字体 `2.asset` / `3.asset` / `ziti.asset`（图集体积大，慎用双方各生成一版硬拼）  
 
 ---
 
-## 12. Git 合并交接（2026-07-11）
+## 13. 本轮会话已完成摘要（2026-07-11 表现迭代）
 
-- 已按安全流程把同伴的 `origin/master`（版本 `0.4`）合并到分支 `codex/pre-boss-merge-20260711`。
-- 合并提交：`8b2e89f Merge boss models, animations, and card progression`；合并前本地功能安全点：`0ae1457`。
-- 冲突已解决并在 Unity Editor 中验证：无 C# 编译错误（仅 Vuforia Editor 摄像头警告与弃用警告）；Play 模式下切到山鬼关时 `ActiveMonster` 与 `Animator` 均存在。
-- **尚未推送远端，也尚未合回本地 `master`**。建议真机回归通过后，再决定推送该分支或合回 `master`。
-- 工作区保留未跟踪的 `Assets/Screenshots/`、`Assets/Screenshots.meta` 和一个以 `~$` 开头的 Word 临时文件；它们不属于源码提交，后续提交前继续排除。
+| 项 | 结果 |
+|----|------|
+| QTE 首次不弹 UI | 修：`Awake` 勿 `HideImmediate` |
+| 镇魂铃 QTE | 居中大铃 + 压暗 0.78 + 抖/波纹/第三击收定 |
+| 成功结算节奏 | UI 消失后再跳字 + 弱点色闪 |
+| 敌人灼烧 UI | 独立行，修掉富文本标签漏出 |
+| 中文乱码 | 重建图集 + `TmpChineseFontUtil` + ziti→2 fallback |
+| 玩家受击 | HUD 抖 + 红闪（修无 Sprite 不显示） |
+| 弱点 V1 | 光球+粒子+大判定+瞄准高亮+小妖红翅跟随 |
+| 弱点 V1 评价 | **用户：还有问题，合并后再改** |
+
+---
+
+**交接结论**：玩法闭环可演示；本轮重点在 **QTE/反馈/字体/弱点视觉**。  
+**新聊天优先**：① 同伴合并收尾 ② **继续打磨第 1 关弱点** ③ 真机回归。  
+开场请读 **§0 / §7.1 / §8 / §9**。

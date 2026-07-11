@@ -76,29 +76,37 @@ public static class BuildBattleHud
 
         TMP_FontAsset font = FindChineseFont();
 
-        // ========== ① 敌人信息 顶中（名 → 血条 → 意图） ==========
+        // ========== ① 敌人信息 顶中（名 → 血条 → 意图 → 灼烧） ==========
         var enemyRoot = CreatePanel("HUD_Enemy", canvasGo.transform, PanelBg);
         Stretch(enemyRoot, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0, -16), new Vector2(520, 118));
+            new Vector2(0, -16), new Vector2(540, 156));
 
-        // 名称居中顶部
+        // 名称
         var enemyName = CreateTmp("EnemyName", enemyRoot.transform, font, 26, TextMain, TextAlignmentOptions.Center);
         Stretch(enemyName, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0, -8), new Vector2(-16, 30));
+            new Vector2(0, -10), new Vector2(-20, 30));
         ConfigureTmp(enemyName.GetComponent<TextMeshProUGUI>(), "小妖", 26, false);
 
-        // 血条在名称下方
-        var enemyHp = CreateHpBar("EnemyHP", enemyRoot.transform, font, 460, 20);
+        // 血条
+        var enemyHp = CreateHpBar("EnemyHP", enemyRoot.transform, font, 460, 18);
         Stretch(enemyHp.root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0, -46), new Vector2(480, 28));
+            new Vector2(0, -48), new Vector2(480, 26));
 
-        // 意图在血条下方（用户要求）
+        // 意图徽章（单独一行，不夹状态）
         var intentBadge = CreatePanel("IntentBadge", enemyRoot.transform, IntentBg);
-        Stretch(intentBadge, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-            new Vector2(0, 10), new Vector2(200, 30));
-        var intentText = CreateTmp("IntentText", intentBadge.transform, font, 20, TextMain, TextAlignmentOptions.Center);
+        Stretch(intentBadge, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0, -86), new Vector2(220, 28));
+        var intentText = CreateTmp("IntentText", intentBadge.transform, font, 18, TextMain, TextAlignmentOptions.Center);
         FullStretch(intentText);
-        ConfigureTmp(intentText.GetComponent<TextMeshProUGUI>(), "普通攻击", 20, false);
+        ConfigureTmp(intentText.GetComponent<TextMeshProUGUI>(), "普通攻击", 18, false);
+
+        // 灼烧状态（独立行，默认隐藏）
+        var burnTextGo = CreateTmp("BurnText", enemyRoot.transform, font, 17,
+            new Color(1f, 0.55f, 0.22f, 1f), TextAlignmentOptions.Center);
+        Stretch(burnTextGo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0, -122), new Vector2(280, 24));
+        ConfigureTmp(burnTextGo.GetComponent<TextMeshProUGUI>(), "灼烧 0 层", 17, false);
+        burnTextGo.SetActive(false);
 
         var enemyHb = enemyRoot.AddComponent<HealthBarUI>();
         enemyHb.isPlayer = false;
@@ -209,6 +217,7 @@ public static class BuildBattleHud
         biu.hintText = hintTmp;
         biu.enemyNameText = enemyName.GetComponent<TextMeshProUGUI>();
         biu.enemyIntentText = intentText.GetComponent<TextMeshProUGUI>();
+        biu.enemyBurnText = burnTextGo.GetComponent<TextMeshProUGUI>();
         biu.enemyDisplayName = "小妖";
 
         // ========== ⑥ 操作区 右下 ==========
@@ -302,6 +311,118 @@ public static class BuildBattleHud
 
         Debug.Log("[BuildBattleHud] 横屏战斗 HUD 已按参考图重建并保存。");
         EditorUtility.DisplayDialog("重建HUD", "横屏战斗 HUD 已重建完成。\n请 Play 查看效果。", "OK");
+    }
+
+    /// <summary>
+    /// 仅修复顶栏敌人状态：加高面板、意图与灼烧分行、绑定 BurnText。
+    /// 不重建整套 HUD。
+    /// </summary>
+    [MenuItem("AR封妖/修复敌人状态UI布局")]
+    public static void FixEnemyStatusHud()
+    {
+        var canvas = GameObject.Find("Canvas");
+        if (canvas == null)
+        {
+            Debug.LogError("[BuildBattleHud] 无 Canvas");
+            return;
+        }
+
+        var enemyRoot = canvas.transform.Find("HUD_Enemy");
+        if (enemyRoot == null)
+        {
+            Debug.LogError("[BuildBattleHud] 无 HUD_Enemy，请先「重建战斗HUD」");
+            return;
+        }
+
+        TMP_FontAsset font = FindChineseFont();
+        var rootRt = enemyRoot.GetComponent<RectTransform>();
+        // 加高、略加宽，给意图+灼烧留空
+        rootRt.sizeDelta = new Vector2(540f, 156f);
+        rootRt.anchoredPosition = new Vector2(0f, -16f);
+
+        // 名称
+        var nameT = enemyRoot.Find("EnemyName") as RectTransform;
+        if (nameT != null)
+        {
+            Stretch(nameT.gameObject, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0, -10), new Vector2(-20, 30));
+        }
+
+        // 血条
+        var hp = enemyRoot.Find("EnemyHP") as RectTransform;
+        if (hp != null)
+        {
+            Stretch(hp.gameObject, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0, -48), new Vector2(480, 26));
+        }
+
+        // 意图徽章
+        var intentBadge = enemyRoot.Find("IntentBadge") as RectTransform;
+        if (intentBadge != null)
+        {
+            Stretch(intentBadge.gameObject, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0, -86), new Vector2(220, 28));
+            var intentTmp = intentBadge.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (intentTmp != null)
+            {
+                intentTmp.richText = true;
+                intentTmp.fontSize = 18;
+                // 去掉可能残留的富文本标签行
+                string t = intentTmp.text ?? "";
+                int nl = t.IndexOf('\n');
+                if (nl >= 0) intentTmp.text = t.Substring(0, nl);
+                if (t.Contains("<color"))
+                {
+                    // 只保留第一行纯意图
+                    intentTmp.text = t.Split('\n')[0]
+                        .Replace("<color=#FF8A33>", "")
+                        .Replace("</color>", "");
+                }
+            }
+        }
+
+        // 灼烧文本
+        Transform burnTf = enemyRoot.Find("BurnText");
+        GameObject burnGo;
+        TextMeshProUGUI burnTmp;
+        if (burnTf == null)
+        {
+            burnGo = CreateTmp("BurnText", enemyRoot, font, 17,
+                new Color(1f, 0.55f, 0.22f, 1f), TextAlignmentOptions.Center);
+            burnTmp = burnGo.GetComponent<TextMeshProUGUI>();
+        }
+        else
+        {
+            burnGo = burnTf.gameObject;
+            burnTmp = burnGo.GetComponent<TextMeshProUGUI>();
+            if (burnTmp == null) burnTmp = burnGo.AddComponent<TextMeshProUGUI>();
+        }
+        Stretch(burnGo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0, -122), new Vector2(280, 24));
+        if (font != null) burnTmp.font = font;
+        burnTmp.fontSize = 17;
+        burnTmp.color = new Color(1f, 0.55f, 0.22f, 1f);
+        burnTmp.alignment = TextAlignmentOptions.Center;
+        burnTmp.richText = false;
+        burnTmp.raycastTarget = false;
+        burnGo.SetActive(false);
+
+        // 绑定 BattleInfoUI（可能在 HUD_SideInfo 上）
+        var biu = Object.FindAnyObjectByType<BattleInfoUI>(FindObjectsInactive.Include);
+        if (biu != null)
+        {
+            if (nameT != null) biu.enemyNameText = nameT.GetComponent<TextMeshProUGUI>();
+            if (intentBadge != null)
+                biu.enemyIntentText = intentBadge.GetComponentInChildren<TextMeshProUGUI>(true);
+            biu.enemyBurnText = burnTmp;
+            EditorUtility.SetDirty(biu);
+        }
+
+        EditorUtility.SetDirty(enemyRoot.gameObject);
+        EditorUtility.SetDirty(canvas);
+        EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+        EditorSceneManager.SaveOpenScenes();
+        Debug.Log("[BuildBattleHud] 敌人状态 UI 已修复：独立灼烧行 + 加高顶栏。");
     }
 
     // ---------- helpers ----------

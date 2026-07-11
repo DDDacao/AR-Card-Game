@@ -128,23 +128,26 @@ public class CardManager : MonoBehaviour
 
         if (canQte && QTEManager.Instance != null)
         {
-            Debug.Log($"[CardManager] 命中弱点【{weakness.weaknessType}】，触发 QTE！牌：{card.cardName}");
+            var weaknessType = weakness.weaknessType;
+            Debug.Log($"[CardManager] 命中弱点【{weaknessType}】，触发 QTE！牌：{card.cardName}");
+            // 成功回调在 QTE 结果界面关闭后触发（跳字/闪色对齐）
             QTEManager.Instance.StartClickQTE(success =>
             {
-                ApplyTargetedEffect(card, enemy, success);
+                ApplyTargetedEffect(card, enemy, success, weaknessType);
                 if (TurnManager.Instance != null)
                     TurnManager.Instance.CheckBattleEnd();
             });
         }
         else
         {
-            ApplyTargetedEffect(card, enemy, false);
+            var tag = hitWeakness && weakness != null ? weakness.weaknessType : WeaknessType.None;
+            ApplyTargetedEffect(card, enemy, false, tag);
             if (TurnManager.Instance != null)
                 TurnManager.Instance.CheckBattleEnd();
         }
     }
 
-    private void ApplyTargetedEffect(CardDataSO card, CharacterStats enemy, bool qteSuccess)
+    private void ApplyTargetedEffect(CardDataSO card, CharacterStats enemy, bool qteSuccess, WeaknessType hitWeaknessType)
     {
         if (enemy == null || card == null) return;
 
@@ -162,11 +165,15 @@ public class CardManager : MonoBehaviour
         if (qteSuccess)
             totalDmg = baseDmg + Mathf.RoundToInt(baseDmg * qteBonusMultiplier);
 
+        // QTE 成功：跳字同时闪一下弱点色（只闪一次，与主伤害同步）
+        if (qteSuccess && hitWeaknessType != WeaknessType.None)
+            MonsterHitFlash.Play(enemy, hitWeaknessType);
+
         switch (card.cardType)
         {
             case CardType.Attack:
             case CardType.Fire:
-                enemy.TakeDamage(totalDmg);
+                ApplyDamageWithPopup(enemy, totalDmg, qteSuccess);
                 if (card.specialEffect == CardSpecialEffect.ApplyBurn)
                 {
                     int stacks = Mathf.Max(1, card.specialEffectValue);
@@ -179,7 +186,7 @@ public class CardManager : MonoBehaviour
                     int damagePerStack = Mathf.Max(1, card.specialEffectValue);
                     int burstDamage = stacks * damagePerStack;
                     if (burstDamage > 0)
-                        enemy.TakeDamage(burstDamage);
+                        ApplyDamageWithPopup(enemy, burstDamage, qteSuccess);
                     Debug.Log($"[CardManager] 【{card.cardName}】引爆 {stacks} 层灼烧，额外造成 {burstDamage} 点伤害。");
                 }
                 Debug.Log(qteSuccess
@@ -189,14 +196,14 @@ public class CardManager : MonoBehaviour
 
             case CardType.ArmorBreak:
                 // 破甲：先结算伤害；QTE 成功再额外破甲（effectValue2，默认等于 effectValue）
-                enemy.TakeDamage(totalDmg);
+                ApplyDamageWithPopup(enemy, totalDmg, qteSuccess);
                 if (card.specialEffect == CardSpecialEffect.DetonateBurn)
                 {
                     int stacks = enemy.ConsumeBurn();
                     int damagePerStack = Mathf.Max(1, card.specialEffectValue);
                     int burstDamage = stacks * damagePerStack;
                     if (burstDamage > 0)
-                        enemy.TakeDamage(burstDamage);
+                        ApplyDamageWithPopup(enemy, burstDamage, qteSuccess);
                     Debug.Log($"[CardManager] 【{card.cardName}】引爆 {stacks} 层灼烧，额外造成 {burstDamage} 点伤害。");
                 }
                 if (qteSuccess)
@@ -215,7 +222,7 @@ public class CardManager : MonoBehaviour
                 break;
 
             case CardType.Seal:
-                enemy.TakeDamage(totalDmg);
+                ApplyDamageWithPopup(enemy, totalDmg, qteSuccess);
                 if (qteSuccess)
                 {
                     var intent = enemy.GetComponent<EnemyIntentController>();
@@ -231,5 +238,12 @@ public class CardManager : MonoBehaviour
                 }
                 break;
         }
+    }
+
+    private static void ApplyDamageWithPopup(CharacterStats enemy, int damage, bool empowered)
+    {
+        if (enemy == null || damage <= 0) return;
+        enemy.TakeDamage(damage);
+        DamagePopup.Show(enemy.transform, damage, empowered);
     }
 }
