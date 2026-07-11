@@ -88,7 +88,7 @@ public class TurnManager : MonoBehaviour
             }
         }
 
-        if (enemyIntent == null && enemyStats != null)
+        if (enemyStats != null)
         {
             enemyIntent = enemyStats.GetComponent<EnemyIntentController>();
             if (enemyIntent == null)

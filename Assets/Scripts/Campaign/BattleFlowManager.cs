@@ -11,6 +11,11 @@ public class BattleFlowManager : MonoBehaviour
     [Header("战役")]
     public CampaignSO campaign;
 
+    [Header("AR 多图识别配置")]
+    public bool useMultipleImageTargets = false;
+    [Tooltip("按关卡顺序（0, 1, 2）拖入场景中三个怪物的 CharacterStats 引用")]
+    public List<CharacterStats> stageEnemies = new List<CharacterStats>();
+
     [Header("引用")]
     public TurnManager turnManager;
     public CardDeck cardDeck;
@@ -119,8 +124,22 @@ public class BattleFlowManager : MonoBehaviour
     {
         if (stage == null || turnManager == null) return;
 
-        // 动态切换怪物3D模型与Animator绑定
-        SwapMonsterModel(CurrentStageIndex);
+        if (useMultipleImageTargets)
+        {
+            if (stageEnemies != null && CurrentStageIndex < stageEnemies.Count)
+            {
+                turnManager.enemyStats = stageEnemies[CurrentStageIndex];
+            }
+            else
+            {
+                Debug.LogError($"[BattleFlow] StageEnemies 列表未配置或索引超限！CurrentStageIndex: {CurrentStageIndex}");
+            }
+        }
+        else
+        {
+            // 动态切换怪物3D模型与Animator绑定
+            SwapMonsterModel(CurrentStageIndex);
+        }
 
         // 敌人显示名
         if (battleInfoUI != null)
@@ -132,16 +151,12 @@ public class BattleFlowManager : MonoBehaviour
             turnManager.enemyStats.templateData = stage.enemyData;
         }
 
-        // 符匣：基础牌按关卡固定顺序发放，已获奖励按策划指定的基础抽牌节点插入。
+        // 符匣：本关顺序 + 已获奖励插在开局序列前（奖励进符匣头部，开局更容易摸到）
         if (cardDeck != null)
         {
             cardDeck.useFixedOrder = true;
             cardDeck.fuXiaOrder = stage.fuXiaOrder;
-            cardDeck.runtimePrefixCards = new List<CardDataSO>();
-            cardDeck.runtimeEarnedRewards = new List<CardDataSO>(earnedRewards);
-            cardDeck.runtimeRewardInsertions = stage.rewardInsertions != null
-                ? new List<BattleStageSO.RewardCardInsertion>(stage.rewardInsertions)
-                : new List<BattleStageSO.RewardCardInsertion>();
+            cardDeck.runtimePrefixCards = new List<CardDataSO>(earnedRewards);
         }
 
         // 意图
@@ -153,6 +168,17 @@ public class BattleFlowManager : MonoBehaviour
                 turnManager.enemyIntent.intentLoop = new List<EnemyIntentController.IntentStep>(stage.intentLoop);
             }
             turnManager.enemyIntent.RefreshWeaknessList();
+        }
+
+        // 绑定血条 UI
+        var healthBars = FindObjectsByType<HealthBarUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var hb in healthBars)
+        {
+            if (!hb.isPlayer)
+            {
+                hb.Bind(turnManager.enemyStats);
+                break;
+            }
         }
     }
 

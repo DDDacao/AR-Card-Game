@@ -76,6 +76,13 @@ public class WeaknessPoint : MonoBehaviour
     {
         if (markerInstance != null) return;
 
+        var existing = transform.Find("WeaknessMarker");
+        if (existing != null)
+        {
+            markerInstance = existing.gameObject;
+            return;
+        }
+
         // 半透明球体标记弱点位置
         markerInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         markerInstance.name = "WeaknessMarker";

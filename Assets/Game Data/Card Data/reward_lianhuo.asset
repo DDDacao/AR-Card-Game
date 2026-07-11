@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: reward_lianhuo
   m_EditorClassIdentifier: Assembly-CSharp::CardDataSO
   cardName: "\u70BC\u706B\u7B26"
-  cardImage: {fileID: 21300000, guid: 639cd9f76ccd84e70904b8eba30af0fb, type: 3}
+  cardImage: {fileID: 21300000, guid: 84e3c59666e5af0499fdff39f1057ede, type: 3}
   cost: 1
   cardType: 5
   description: "\u9020\u62103\u70B9\u4F24\u5BB3\uFF0C\u9644\u52A02\u5C42\u707C\u70E7"

@@ -58,6 +58,28 @@ public class HealthBarUI : MonoBehaviour
         ApplyDefaultColors();
     }
 
+    public void Bind(CharacterStats stats)
+    {
+        if (characterStats != null)
+        {
+            characterStats.OnHPChanged -= UpdateHPUI;
+            characterStats.OnArmorChanged -= UpdateArmorUI;
+        }
+
+        characterStats = stats;
+
+        if (characterStats == null) return;
+
+        characterStats.OnHPChanged -= UpdateHPUI;
+        characterStats.OnArmorChanged -= UpdateArmorUI;
+        characterStats.OnHPChanged += UpdateHPUI;
+        characterStats.OnArmorChanged += UpdateArmorUI;
+
+        UpdateHPUI(characterStats.CurrentHP, characterStats.MaxHP);
+        UpdateArmorUI(characterStats.CurrentArmor);
+        ApplyDefaultColors();
+    }
+
     private void ApplyDefaultColors()
     {
         Color red = new Color(0.78f, 0.12f, 0.12f, 1f);

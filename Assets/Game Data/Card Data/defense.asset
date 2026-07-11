@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: defense
   m_EditorClassIdentifier: Assembly-CSharp::CardDataSO
   cardName: "\u62A4\u8EAB\u7B26"
-  cardImage: {fileID: 21300000, guid: 3a28ac70669ed4f47924fd29938e7f4a, type: 3}
+  cardImage: {fileID: 21300000, guid: 30075de00dea4474182b8be0dd91272f, type: 3}
   cost: 1
   cardType: 1
   description: "\u83B7\u5F975\u70B9\u62A4\u7532"
   effectValue: 5
   effectValue2: 0
+  specialEffect: 0
+  specialEffectValue: 0
   weaknessTag: 0

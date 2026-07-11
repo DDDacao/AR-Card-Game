@@ -90,6 +90,33 @@ public class BattleBootstrap : MonoBehaviour
         }
     }
 
+    public void OnTargetTracked(int targetStageIndex)
+    {
+        var flow = BattleFlowManager.Instance != null
+            ? BattleFlowManager.Instance
+            : FindAnyObjectByType<BattleFlowManager>();
+        
+        if (flow != null && flow.campaign != null)
+        {
+            // Only start the battle if the recognized target matches the current campaign stage
+            if (flow.CurrentStageIndex == targetStageIndex)
+            {
+                Debug.Log($"[BattleBootstrap] 扫描到匹配当前关卡 {targetStageIndex + 1} 的卡牌，开始战斗。");
+                BeginBattle();
+            }
+            else
+            {
+                Debug.LogWarning($"[BattleBootstrap] 扫描到卡牌 {targetStageIndex + 1}，但当前关卡为 {flow.CurrentStageIndex + 1}，忽略。");
+            }
+        }
+        else
+        {
+            // 非战役模式，直接开启战斗
+            Debug.Log($"[BattleBootstrap] 非战役模式，扫描到卡牌 {targetStageIndex + 1}，开始战斗。");
+            BeginBattle();
+        }
+    }
+
     public void ResetAndStart()
     {
         battleStarted = false;

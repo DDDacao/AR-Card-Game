@@ -36,7 +36,7 @@ public class CardDeck : MonoBehaviour
 
     [Header("手牌显示缩放（横屏）")]
     [Range(0.4f, 1.2f)]
-    public float handCardScale = 0.45f;
+    public float handCardScale = 0.6f;
 
     private List<CardDataSO> drawDeck = new();   // 符匣剩余
     private List<Card> handCardObjectList = new();
