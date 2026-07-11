@@ -1,7 +1,7 @@
 # AR封妖牌局 — PROJECT_SUMMARY（交接用）
 
 > **用途**：新对话 / 新同学接入时先读本文件。  
-> **更新日期**：2026-07-11  
+> **更新日期**：2026-07-11（已完成 Boss 模型/动画合并）
 > **策划案**：根目录 `AR封妖牌局_第一版玩法策划案.docx`  
 > **UI 参考**：根目录 `UI设计参考图.png`（横屏简易 HUD）
 
@@ -43,12 +43,13 @@
 | 敌人意图 | ✅ | 攻击→防御→蓄力（关卡可覆写）；只亮对应弱点 |
 | 横屏 HUD | ✅ | 顶敌人、右上玩家、右中提示、右下结束回合；手牌 scale≈0.45 |
 | 三关战役 | ✅ | 小妖→奖励→石灵→奖励→山鬼；失败重试本关 |
+| 三关 Boss 模型与状态机 | ✅ | 已合并三套怪物预制体、Animator Controller 与 FSM；`BattleFlowManager` 运行时按关卡实例化对应模型，Android 构建也可用 |
 | 奖励三选一 | ✅ | `RewardSelectUI`；奖励按策划指定回合插入后续符匣，不再一律置顶 |
 | 手机 AR 识别 | ✅ | 用户已验证扫图可用；Editor 用 `BattleBootstrap.skipARForEditor` 跳过 |
 | 开始界面与开场动画 | ✅ | 场景保留唯一 `PF_StartIntro`；120 帧序列播放完成后才调用 `BattleBootstrap.BeginBattle()` 进入战役 |
 | 灼烧构筑 | ✅ | 基础烈火符附加 1 层灼烧；奖励炼火符附加 2 层；敌方行动结束后每层扣 1 HP；奖励引火诀按每层 3 伤引爆并清空层数 |
 
-**相对策划案仍缺**：精准 QTE、Boss 多阶段/独立模型、更丰富封印演出、真机「未识别不开战」门闩（可选）。
+**相对策划案仍缺**：精准 QTE、Boss 多阶段、更丰富封印演出、真机「未识别不开战」门闩（可选）。
 
 ---
 
@@ -76,6 +77,7 @@
 | 基础牌 | `Card Data/attack(斩妖)` `defense(护身)` `break(破煞)` `fire(烈火)` `seal(镇魂)` `hp(聚气)` |
 | 奖励牌 | `reward_lianzhan/lianhuo/zhenhunling/pozhen/yinhuo/dinghun` |
 | 玩家 | `player.asset`（50HP / 3 灵气） |
+| 三关怪物预制体 | `Assets/fbx/monsters/1/Prefabs/Vespomorph.prefab`、`2/Prefabs/Cavecrawler.prefab`、`3/Prefabs/Drackmahre.prefab` |
 
 ### 3.3 已验证的固定补牌顺序（策划案 V1.0）
 
@@ -104,8 +106,8 @@
 ```
 BattleBootstrap.BeginBattle()
   └─ BattleFlowManager.StartCampaign()
-       └─ ApplyStageToBattle(stage)  // 敌人SO、符匣、意图、显示名
-       └─ TurnManager.StartBattle()  // 抽开局手牌、展示意图/弱点
+       └─ ApplyStageToBattle(stage)  // 敌人SO、符匣、意图、显示名、按关卡换怪物预制体
+       └─ TurnManager.StartBattle()  // 进入 BattleStateMachine，抽开局手牌、展示意图/弱点
 
 玩家出牌 CardDragHandler
   └─ RaycastAll 优先 WeaknessPoint
@@ -113,7 +115,9 @@ BattleBootstrap.BeginBattle()
        └─ 匹配弱点 → QTEManager → 结算伤害/破甲/打断
 
 结束回合 TurnManager.EndPlayerTurn
-  └─ EnemyIntentController.ExecuteAndAdvance(player)
+  └─ BattleStateEnemyTurn.EnemyActionFlow()
+       └─ EnemyIntentController.ExecuteAndAdvance(player)
+       └─ enemyStats.ResolveBurnAtTurnEnd()  // 灼烧在敌方行动后结算
   └─ 下一玩家回合 PresentIntent（换弱点）
 
 胜负 TurnManager.OnBattleEnded
@@ -134,7 +138,7 @@ Assets/Scripts/
     Mono/ Card.cs, CardDeck.cs, CardDragHandler.cs, CardArrow.cs
     SO/   CardDataSO.cs, CardLibrarySO.cs, FuXiaOrderSO.cs
   Character/
-    Mono/ CharacterStats.cs, WeaknessPoint.cs, EnemyIntentController.cs
+    Mono/ CharacterStats.cs, WeaknessPoint.cs, EnemyIntentController.cs, MonsterAnimationBridge.cs
     SO/   CharacterDataSO.cs
   Combat/
     QTEManager.cs
@@ -146,6 +150,8 @@ Assets/Scripts/
     QTEPanelUI, RewardSelectUI
   Utilities/
     Enums.cs, PoolTool.cs, CardTranfrom.cs
+  FSM/
+    BattleStateMachine.cs, BattleStates.cs, IBattleState.cs
   EllenARController.cs     # 动画按钮测试，非核心战斗
 
 Assets/_ARSealCardGame/
@@ -179,7 +185,7 @@ Assets/Editor/             # 一键配置菜单（见下）
 4. **奖励 UI**：`RewardSelectUI` 与 `HUD_Reward` 需激活且置顶；`BattleFlowManager.Awake` 里 Subscribe 避免漏事件。  
 5. **手牌大小**：`CardDeck.handCardScale` 当前约 **0.45**，可在 Inspector 调。  
 6. **Editor Vuforia**：Webcam / stream 警告可忽略；真机识别用户已确认 OK。  
-7. **敌人模型**：三关仍共用 Ellen 占位模型，靠 `CharacterDataSO` 改血甲与意图区分。  
+7. **敌人模型**：`BattleFlowManager` 的三套怪物预制体已在 `SampleScene` 绑定；不得改回仅在 `UNITY_EDITOR` 中用 `AssetDatabase` 加载，否则 Android 包不会出现模型。
 8. **开始界面**：场景中只能保留一个 `PF_StartIntro`。`BattleBootstrap` 会自动订阅其 `IntroFinished` 事件；重复实例会导致动画需要点两次。
 9. **灼烧结算**：当前在敌人行动完成后结算，每层 1 点伤害；引火诀会清空现有层数并按每层 3 点伤害引爆。
 10. **策划卡牌分工**：烈火符是基础 10 牌中的火符；炼火符和引火诀分别是第一、第二次奖励池中的火符构筑牌。不要把三者合并或把引火诀当破甲牌。
@@ -198,9 +204,10 @@ Assets/Editor/             # 一键配置菜单（见下）
 
 ### P1 — 内容与表现
 
-**C. Boss 差异化**
+**C. Boss 差异化（模型与基础动画已完成）**
 
-- [ ] 山鬼独立模型或缩放/材质区分  
+- [x] 小妖、石灵、山鬼独立模型与 Animator Controller
+- [ ] 验证怪物受击、死亡、攻击动画是否和战斗事件逐一对应
 - [ ] 蓄力更狠的演出；打断成功反馈  
 - [ ] （可选）Boss 第二阶段意图表  
 
@@ -222,7 +229,7 @@ Assets/Editor/             # 一键配置菜单（见下）
 
 **首选（发布/演示）：**
 
-> 真机全流程回归：开始界面单次点击 → 开场动画 → 扫图 → 三关 → 两次奖励 → 山鬼全通 / 失败重试；记录弱点位置、UI 安全区、结束回合与手牌是否挡操作。
+> 真机全流程回归：开始界面单次点击 → 开场动画 → 扫图 → 三关 → 两次奖励 → 山鬼全通 / 失败重试；记录弱点位置、UI 安全区、结束回合与手牌是否挡操作。额外核验三关切换时是否出现各自模型，以及攻击/受击/死亡动画是否正确切换。
 
 **次选（发布/演示）：**
 
@@ -256,3 +263,13 @@ Assets/Editor/             # 一键配置菜单（见下）
 ---
 
 **交接结论**：核心玩法闭环（开始界面 + 符匣 + 意图弱点 + QTE + 灼烧构筑 + 三关奖励）已可演示。新聊天请从 **§8 / §9** 选一条任务开干；优先 **真机全流程回归**，再做 **Boss 差异化**。
+
+---
+
+## 12. Git 合并交接（2026-07-11）
+
+- 已按安全流程把同伴的 `origin/master`（版本 `0.4`）合并到分支 `codex/pre-boss-merge-20260711`。
+- 合并提交：`8b2e89f Merge boss models, animations, and card progression`；合并前本地功能安全点：`0ae1457`。
+- 冲突已解决并在 Unity Editor 中验证：无 C# 编译错误（仅 Vuforia Editor 摄像头警告与弃用警告）；Play 模式下切到山鬼关时 `ActiveMonster` 与 `Animator` 均存在。
+- **尚未推送远端，也尚未合回本地 `master`**。建议真机回归通过后，再决定推送该分支或合回 `master`。
+- 工作区保留未跟踪的 `Assets/Screenshots/`、`Assets/Screenshots.meta` 和一个以 `~$` 开头的 Word 临时文件；它们不属于源码提交，后续提交前继续排除。
