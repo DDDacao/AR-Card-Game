@@ -18,6 +18,11 @@ public class BattleFlowManager : MonoBehaviour
     public RewardSelectUI rewardUI;
     public BattleInfoUI battleInfoUI;
 
+    [Header("关卡怪物模型（Editor 与真机共用）")]
+    public GameObject xiaoYaoMonsterPrefab;
+    public GameObject shiLingMonsterPrefab;
+    public GameObject shanGuiMonsterPrefab;
+
     [Header("本局获得的奖励符（带入后续符匣）")]
     public List<CardDataSO> earnedRewards = new List<CardDataSO>();
 
@@ -113,6 +118,9 @@ public class BattleFlowManager : MonoBehaviour
     private void ApplyStageToBattle(BattleStageSO stage)
     {
         if (stage == null || turnManager == null) return;
+
+        // 动态切换怪物3D模型与Animator绑定
+        SwapMonsterModel(CurrentStageIndex);
 
         // 敌人显示名
         if (battleInfoUI != null)
@@ -240,5 +248,54 @@ public class BattleFlowManager : MonoBehaviour
                 RetryCurrentStage();
             });
         }
+    }
+
+    private void SwapMonsterModel(int stageIndex)
+    {
+        GameObject enemyGo = GameObject.Find("Ellen_skin (2)");
+        if (enemyGo == null) return;
+
+        // 1. 隐藏原 Ellen 的外观与网格
+        for (int i = 0; i < enemyGo.transform.childCount; i++)
+        {
+            var child = enemyGo.transform.GetChild(i);
+            if (child.name.StartsWith("000") || child.name.Contains("Avatar") || child.name.Contains("Bip") || child.name.Contains("ACGlobal"))
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
+
+        // 2. 销毁上一次生成的怪物模型。
+        var previousMonster = enemyGo.transform.Find("ActiveMonster");
+        if (previousMonster != null)
+            Destroy(previousMonster.gameObject);
+
+        // 3. 根据关卡实例化序列化引用。不要使用 UnityEditor.AssetDatabase，确保 Android 真机也能生成模型。
+        GameObject prefab = stageIndex switch
+        {
+            0 => xiaoYaoMonsterPrefab,
+            1 => shiLingMonsterPrefab,
+            2 => shanGuiMonsterPrefab,
+            _ => null
+        };
+
+        if (prefab != null)
+        {
+            GameObject monsterInst = Instantiate(prefab, enemyGo.transform);
+            monsterInst.name = "ActiveMonster";
+            monsterInst.transform.localPosition = Vector3.zero;
+            monsterInst.transform.localRotation = Quaternion.identity;
+            monsterInst.transform.localScale = prefab.transform.localScale;
+
+            // 4. 绑定 Animator 到动画桥梁组件
+            var animBridge = enemyGo.GetComponent<MonsterAnimationBridge>();
+            if (animBridge == null)
+                animBridge = enemyGo.AddComponent<MonsterAnimationBridge>();
+
+            var animator = monsterInst.GetComponent<Animator>();
+            animBridge.BindTargetAnimator(animator, prefab.name);
+        }
+        else
+            Debug.LogWarning($"[BattleFlow] 第 {stageIndex + 1} 关未绑定怪物预制体，保留原模型。");
     }
 }

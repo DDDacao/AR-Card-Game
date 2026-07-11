@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using DG.Tweening;
 
 public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler, IDragHandler
 {
@@ -9,6 +10,8 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
     private Card currentCard;
     private bool canMove;
     private bool canExecute;
+
+    public bool IsDragging { get; private set; }
 
     private void Awake()
     {
@@ -39,6 +42,14 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
         if (currentCard == null || currentCard.cardData == null) return;
 
+        IsDragging = true;
+        Transform visual = transform.Find("Entry");
+        if (visual != null)
+        {
+            visual.DOKill();
+            visual.localPosition = Vector3.zero;
+        }
+
         if (currentCard.cardData.IsTargetedCard())
         {
             currentArrow = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
@@ -52,6 +63,7 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
             canMove = true;
         }
     }
+
 
     public void OnDrag(PointerEventData eventData)
     {
@@ -70,6 +82,8 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        IsDragging = false;
+
         if (currentArrow != null)
         {
             Destroy(currentArrow);

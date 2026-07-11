@@ -2,8 +2,9 @@ using UnityEngine;
 using TMPro; 
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering; 
+using DG.Tweening;
 
-public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
+public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
    
     [Header(header:"test")]
@@ -17,6 +18,15 @@ public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
     public Vector3 originalPosition;
 
     public int originallayerOrder;
+
+    private Transform visualChild;
+    private CardDragHandler dragHandler;
+
+    private void Awake()
+    {
+        visualChild = transform.Find("Entry");
+        dragHandler = GetComponent<CardDragHandler>();
+    }
 
     private void Start() {
         Init(cardData);
@@ -61,11 +71,25 @@ public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
     {
         transform.localPosition = position;
     }
+
     public void OnPointerEnter(PointerEventData eventData)
     {
-        transform.localPosition = originalPosition + Vector3.up;
+        if (dragHandler != null && dragHandler.IsDragging) return;
+        if (QTEManager.Instance != null && QTEManager.Instance.IsRunning) return;
+
         GetComponent<SortingGroup>().sortingOrder = 25;
+        if (visualChild != null)
+        {
+            visualChild.DOKill();
+            visualChild.DOLocalMove(new Vector3(0f, 1.2f, 0f), 0.2f).SetEase(Ease.OutCubic);
+        }
+        else
+        {
+            transform.DOKill();
+            transform.DOLocalMove(originalPosition + Vector3.up, 0.2f).SetEase(Ease.OutCubic);
+        }
     }
+
     public void OnPointerExit(PointerEventData eventData)
     {
         ResetCardPosition();
@@ -73,7 +97,18 @@ public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
 
     public void ResetCardPosition()
     {
-        transform.localPosition = originalPosition;
         GetComponent<SortingGroup>().sortingOrder = originallayerOrder;
+        if (visualChild != null)
+        {
+            visualChild.DOKill();
+            visualChild.DOLocalMove(Vector3.zero, 0.2f).SetEase(Ease.OutCubic);
+        }
+        else
+        {
+            transform.DOKill();
+            transform.DOLocalMove(originalPosition, 0.2f).SetEase(Ease.OutCubic);
+        }
+        transform.localPosition = originalPosition;
     }
 }
+
