@@ -89,6 +89,13 @@ public class CharacterStats : MonoBehaviour
     private void Die()
     {
         Debug.Log($"{gameObject.name} 死亡了！");
+        
+        var animBridge = GetComponent<MonsterAnimationBridge>();
+        if (animBridge != null)
+        {
+            animBridge.PlayDeath();
+        }
+
         if (TurnManager.Instance != null)
             TurnManager.Instance.NotifyCharacterDied(this);
     }

@@ -114,6 +114,9 @@ public class BattleFlowManager : MonoBehaviour
     {
         if (stage == null || turnManager == null) return;
 
+        // 动态切换怪物3D模型与Animator绑定
+        SwapMonsterModel(CurrentStageIndex);
+
         // 敌人显示名
         if (battleInfoUI != null)
             battleInfoUI.enemyDisplayName = stage.enemyDisplayName;
@@ -235,6 +238,65 @@ public class BattleFlowManager : MonoBehaviour
                 resultUI.HidePanel();
                 RetryCurrentStage();
             });
+        }
+    }
+
+    private void SwapMonsterModel(int stageIndex)
+    {
+        GameObject enemyGo = GameObject.Find("Ellen_skin (2)");
+        if (enemyGo == null) return;
+
+        // 1. 隐藏原 Ellen 的外观与网格
+        for (int i = 0; i < enemyGo.transform.childCount; i++)
+        {
+            var child = enemyGo.transform.GetChild(i);
+            if (child.name.StartsWith("000") || child.name.Contains("Avatar") || child.name.Contains("Bip") || child.name.Contains("ACGlobal"))
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
+
+        // 2. 销毁上一次生成的怪物模型
+        for (int i = 0; i < enemyGo.transform.childCount; i++)
+        {
+            var child = enemyGo.transform.GetChild(i);
+            if (child.name == "ActiveMonster")
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
+
+        // 3. 根据关卡索引加载并实例化对应的怪物 Prefab
+        string prefabPath = "";
+        if (stageIndex == 0) prefabPath = "Assets/fbx/monsters/1/Prefabs/Vespomorph.prefab";
+        else if (stageIndex == 1) prefabPath = "Assets/fbx/monsters/2/Prefabs/Cavecrawler.prefab";
+        else if (stageIndex == 2) prefabPath = "Assets/fbx/monsters/3/Prefabs/Drackmahre.prefab";
+
+        if (!string.IsNullOrEmpty(prefabPath))
+        {
+#if UNITY_EDITOR
+            GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab != null)
+            {
+                GameObject monsterInst = Instantiate(prefab, enemyGo.transform);
+                monsterInst.name = "ActiveMonster";
+                monsterInst.transform.localPosition = Vector3.zero;
+                monsterInst.transform.localRotation = Quaternion.identity;
+                monsterInst.transform.localScale = prefab.transform.localScale;
+
+                // 4. 绑定 Animator 到动画桥梁组件
+                var animBridge = enemyGo.GetComponent<MonsterAnimationBridge>();
+                if (animBridge == null)
+                    animBridge = enemyGo.AddComponent<MonsterAnimationBridge>();
+                
+                var animator = monsterInst.GetComponent<Animator>();
+                animBridge.BindTargetAnimator(animator, prefab.name);
+            }
+            else
+            {
+                Debug.LogError($"[BattleFlow] 找不到怪物预制体: {prefabPath}");
+            }
+#endif
         }
     }
 }

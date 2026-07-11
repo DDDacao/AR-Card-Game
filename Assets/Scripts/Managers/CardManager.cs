@@ -147,6 +147,15 @@ public class CardManager : MonoBehaviour
     {
         if (enemy == null || card == null) return;
 
+        // Play hit animation on the monster
+        var animBridge = enemy.GetComponent<MonsterAnimationBridge>();
+        if (animBridge == null)
+            animBridge = enemy.gameObject.AddComponent<MonsterAnimationBridge>();
+        if (animBridge != null)
+        {
+            animBridge.PlayGetHit();
+        }
+
         int baseDmg = card.effectValue;
         int totalDmg = baseDmg;
         if (qteSuccess)
