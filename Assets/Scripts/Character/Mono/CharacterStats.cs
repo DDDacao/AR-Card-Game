@@ -9,17 +9,20 @@ public class CharacterStats : MonoBehaviour
     [SerializeField] private int currentHP;
     [SerializeField] private int currentEnergy;
     [SerializeField] private int currentArmor;
+    [SerializeField] private int burnStacks;
 
     // 事件通知，方便后续UI更新
     public event Action<int, int> OnHPChanged; // (current, max)
     public event Action<int, int> OnEnergyChanged; // (current, max)
     public event Action<int> OnArmorChanged; // (current)
+    public event Action<int> OnBurnChanged; // (stacks)
 
     public int CurrentHP => currentHP;
     public int MaxHP => templateData != null ? templateData.maxHP : 0;
     public int CurrentEnergy => currentEnergy;
     public int MaxEnergy => templateData != null ? templateData.maxEnergy : 0;
     public int CurrentArmor => currentArmor;
+    public int BurnStacks => burnStacks;
 
     private void Start()
     {
@@ -33,11 +36,13 @@ public class CharacterStats : MonoBehaviour
             currentHP = templateData.maxHP;
             currentEnergy = templateData.maxEnergy;
             currentArmor = templateData.startArmor;
+            burnStacks = 0;
 
             // 广播初始数值
             OnHPChanged?.Invoke(currentHP, templateData.maxHP);
             OnEnergyChanged?.Invoke(currentEnergy, templateData.maxEnergy);
             OnArmorChanged?.Invoke(currentArmor);
+            OnBurnChanged?.Invoke(burnStacks);
         }
         else
         {
@@ -91,6 +96,36 @@ public class CharacterStats : MonoBehaviour
         Debug.Log($"{gameObject.name} 死亡了！");
         if (TurnManager.Instance != null)
             TurnManager.Instance.NotifyCharacterDied(this);
+    }
+    #endregion
+
+    #region 灼烧状态
+    public void AddBurn(int stacks)
+    {
+        if (stacks <= 0) return;
+        burnStacks += stacks;
+        OnBurnChanged?.Invoke(burnStacks);
+    }
+
+    public int ConsumeBurn()
+    {
+        int consumed = burnStacks;
+        burnStacks = 0;
+        OnBurnChanged?.Invoke(burnStacks);
+        return consumed;
+    }
+
+    /// <summary>
+    /// 在本角色回合末结算。每层灼烧造成 1 点伤害，然后保留层数。
+    /// </summary>
+    public int ResolveBurnAtTurnEnd()
+    {
+        if (burnStacks <= 0 || CurrentHP <= 0) return 0;
+
+        int damage = burnStacks;
+        Debug.Log($"[CharacterStats] {gameObject.name} 灼烧结算：{burnStacks} 层，受到 {damage} 点伤害。");
+        TakeDamage(damage);
+        return damage;
     }
     #endregion
 

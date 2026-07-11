@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8882248932510235337
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6628172658800802579}
+  - component: {fileID: 4533461424076634371}
+  m_Layer: 0
+  m_Name: PF_StartIntro
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6628172658800802579
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8882248932510235337}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4533461424076634371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8882248932510235337}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8293bd35ff4b3a04f8433fd17c529778, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StartIntroController
+  introVideo: {fileID: 32900000, guid: 9169a38d8e8f514499ead9060241d6cc, type: 3}
+  firstFrame: {fileID: 2800000, guid: 0772256180235a24eaef33246b6ff5fb, type: 3}
+  tailFrame: {fileID: 2800000, guid: 27723a07e4b38d848860878fbd23e824, type: 3}
+  framesResourcePath: StartIntroFrames
+  frameSequenceFps: 12
+  playbackSpeed: 2.49
+  sourceSecondsReservedForTail: 0.1
+  tailHoldBeforeReveal: 0.1
+  tailRevealDuration: 0.9
+  minimumVideoPlaybackSeconds: 3
+  playVideoAudio: 0
+  yinYangButtonPosition: {x: 0, y: -210}
+  yinYangButtonSize: {x: 420, y: 420}
+  sortingOrder: 1000
+  onIntroFinished:
+    m_PersistentCalls:
+      m_Calls: []

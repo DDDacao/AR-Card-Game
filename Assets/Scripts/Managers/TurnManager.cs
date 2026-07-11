@@ -209,6 +209,12 @@ public class TurnManager : MonoBehaviour
 
         if (CheckBattleEnd()) yield break;
 
+        // 敌方完成行动后结算其身上的灼烧；若灼烧击杀则直接结束战斗。
+        if (enemyStats != null)
+            enemyStats.ResolveBurnAtTurnEnd();
+
+        if (CheckBattleEnd()) yield break;
+
         yield return new WaitForSeconds(0.8f);
 
         if (battleEnded || !isBattleActive) yield break;

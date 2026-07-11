@@ -46,6 +46,7 @@ public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
             case CardType.Ability: return "技能";
             case CardType.ArmorBreak: return "破甲";
             case CardType.Seal: return "镇魂";
+            case CardType.Fire: return "火符";
             default: return type.ToString();
         }
     }

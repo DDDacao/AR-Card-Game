@@ -38,15 +38,17 @@
 |------|------|------|
 | 双相机手牌 | ✅ | ARCamera Base + CardCamera Overlay，`Card` 层 |
 | 出牌交互 | ✅ | 指向牌箭头+射线；防/技能上拖；灵气不足回弹 |
-| 符匣固定顺序 | ✅ | `FuXiaOrderSO`，不洗牌；开局 4 / 每回补 2 / 上限 6；用后本场消耗 |
-| 三色弱点 + QTE | ✅ | 红/黄/紫；命中匹配弱点 → 2 秒点 3 次；成功加伤/破甲/打断蓄力 |
+| 符匣固定顺序 | ✅ | `FuXiaOrderSO`，不洗牌；开局 4 / 每回补 2 / 上限 6；奖励按关卡指定的基础抽牌节点插入；用后本场消耗 |
+| 三色弱点 + QTE | ✅ | 红/黄/紫；命中匹配弱点 → 2 秒点 3 次；成功加伤/破甲/打断蓄力；QTE 中禁止继续出牌 |
 | 敌人意图 | ✅ | 攻击→防御→蓄力（关卡可覆写）；只亮对应弱点 |
 | 横屏 HUD | ✅ | 顶敌人、右上玩家、右中提示、右下结束回合；手牌 scale≈0.45 |
 | 三关战役 | ✅ | 小妖→奖励→石灵→奖励→山鬼；失败重试本关 |
-| 奖励三选一 | ✅ | `RewardSelectUI`；奖励插入后续符匣头部 |
+| 奖励三选一 | ✅ | `RewardSelectUI`；奖励按策划指定回合插入后续符匣，不再一律置顶 |
 | 手机 AR 识别 | ✅ | 用户已验证扫图可用；Editor 用 `BattleBootstrap.skipARForEditor` 跳过 |
+| 开始界面与开场动画 | ✅ | 场景保留唯一 `PF_StartIntro`；120 帧序列播放完成后才调用 `BattleBootstrap.BeginBattle()` 进入战役 |
+| 灼烧构筑 | ✅ | 基础烈火符附加 1 层灼烧；奖励炼火符附加 2 层；敌方行动结束后每层扣 1 HP；奖励引火诀按每层 3 伤引爆并清空层数 |
 
-**相对策划案仍缺**：烈火/灼烧完整 Build、精准 QTE、Boss 多阶段/独立模型、更丰富封印演出、真机「未识别不开战」门闩（可选）。
+**相对策划案仍缺**：精准 QTE、Boss 多阶段/独立模型、更丰富封印演出、真机「未识别不开战」门闩（可选）。
 
 ---
 
@@ -55,7 +57,8 @@
 ### 3.1 流程
 
 ```
-开战(BattleBootstrap → BattleFlowManager.StartCampaign)
+开始界面(PF_StartIntro，播放完毕)
+  → BattleBootstrap.BeginBattle() → BattleFlowManager.StartCampaign()
   → 第1关 小妖(24HP) → 奖励三选一
   → 第2关 石灵(32HP/开局6甲) → 奖励三选一
   → 第3关 山鬼(55HP) → 全通关
@@ -70,20 +73,28 @@
 | 关卡 | `Stage_01_XiaoYao` / `Stage_02_ShiLing` / `Stage_03_ShanGui` |
 | 敌人数值 | `enemy_xiaoyao` / `enemy_shiling` / `enemy_shangui` |
 | 符匣 | `Card Library/FuXia_XiaoYao|ShiLing|ShanGui.asset` |
-| 基础牌 | `Card Data/attack(斩妖)` `defense(护身)` `break(破煞)` `seal(镇魂)` `hp(聚气)` |
+| 基础牌 | `Card Data/attack(斩妖)` `defense(护身)` `break(破煞)` `fire(烈火)` `seal(镇魂)` `hp(聚气)` |
 | 奖励牌 | `reward_lianzhan/lianhuo/zhenhunling/pozhen/yinhuo/dinghun` |
 | 玩家 | `player.asset`（50HP / 3 灵气） |
 
-### 3.3 卡牌类型（`CardType`）
+### 3.3 已验证的固定补牌顺序（策划案 V1.0）
 
-`Attack` | `Defense` | `Ability` | `ArmorBreak` | `Seal`  
+- **小妖**：开局 `斩、斩、护、聚`；第 2 回合 `斩、烈火`；第 3 回合 `护、斩`。
+- **石灵**：开局 `破、斩、护、聚`；第 2 回合 `斩、烈火`；第 3 回合 `护、斩`；第 4 回合 `奖励 1、斩`。
+- **山鬼**：开局 `镇、斩、护、奖励 1`；第 2 回合 `破、斩`；第 3 回合 `奖励 2、聚`；第 4 回合 `烈火、护`。
+
+`CardDeck` 以“已抽基础牌数”为节点插入奖励，保证奖励卡不会错误地全塞到开局。
+
+### 3.4 卡牌类型（`CardType`）
+
+`Attack` | `Defense` | `Ability` | `ArmorBreak` | `Seal` | `Fire`
 
 弱点标签 `WeaknessType`：`RedAttack` / `YellowArmor` / `PurpleSeal`  
 （`CardDataSO.ResolveWeaknessTag()` 可按类型推断）
 
-### 3.4 指向牌 vs 上拖牌
+### 3.5 指向牌 vs 上拖牌
 
-- **箭头指向**：Attack / ArmorBreak / Seal（`IsTargetedCard()`）
+- **箭头指向**：Attack / ArmorBreak / Seal / Fire（`IsTargetedCard()`）
 - **上拖打出**：Defense / Ability
 
 ---
@@ -137,6 +148,10 @@ Assets/Scripts/
     Enums.cs, PoolTool.cs, CardTranfrom.cs
   EllenARController.cs     # 动画按钮测试，非核心战斗
 
+Assets/_ARSealCardGame/
+  Prefabs/PF_StartIntro.prefab
+  Scripts/UI/StartIntroController.cs  # 开始界面、帧序列与完成事件
+
 Assets/Editor/             # 一键配置菜单（见下）
 ```
 
@@ -165,25 +180,21 @@ Assets/Editor/             # 一键配置菜单（见下）
 5. **手牌大小**：`CardDeck.handCardScale` 当前约 **0.45**，可在 Inspector 调。  
 6. **Editor Vuforia**：Webcam / stream 警告可忽略；真机识别用户已确认 OK。  
 7. **敌人模型**：三关仍共用 Ellen 占位模型，靠 `CharacterDataSO` 改血甲与意图区分。  
-8. **炼火/引火**：奖励里多为占位描述，**灼烧层数 DoT 尚未实现**。
+8. **开始界面**：场景中只能保留一个 `PF_StartIntro`。`BattleBootstrap` 会自动订阅其 `IntroFinished` 事件；重复实例会导致动画需要点两次。
+9. **灼烧结算**：当前在敌人行动完成后结算，每层 1 点伤害；引火诀会清空现有层数并按每层 3 点伤害引爆。
+10. **策划卡牌分工**：烈火符是基础 10 牌中的火符；炼火符和引火诀分别是第一、第二次奖励池中的火符构筑牌。不要把三者合并或把引火诀当破甲牌。
 
 ---
 
 ## 8. 下一步必须做什么（按优先级）
 
-### P0 — 建议下一条对话优先做（可玩性/完成度）
+### P0 — 下一条对话优先做（真机验收）
 
 **A. 真机全流程回归 + 可选「识别后开战」**（约 0.5–1 天）
 
 - [ ] 手机：扫图 → 三关 → 两次奖励 → 山鬼全通 / 失败重试  
 - [ ] 可选：`BattleBootstrap` 真机关闭 `autoStartIfNoAR`，仅 `OnTargetFound` 时 `BeginBattle()`  
 - [ ] 记：弱点位置、UI 安全区、结束回合与手牌是否挡操作  
-
-**B. 灼烧 DoT + 烈火/引火真正生效**（约 1–2 天）— **策划 Build 缺口最大**
-
-- [ ] `CharacterStats`：灼烧层数、回合结束结算伤害  
-- [ ] `CardManager`：烈火叠层、引火引爆（奖励卡 `reward_lianhuo` / `reward_yinhuo` 接真实逻辑）  
-- [ ] 意图/UI 可显示当前灼烧层数  
 
 ### P1 — 内容与表现
 
@@ -209,13 +220,13 @@ Assets/Editor/             # 一键配置菜单（见下）
 
 ## 9. 建议的下一条任务（直接开干用）
 
-**首选（内容）：**
+**首选（发布/演示）：**
 
-> 实现灼烧状态：回合结束按层扣血；烈火符叠层；引火诀引爆；在敌人状态或提示区显示灼烧层数。接上已有 reward_lianhuo / reward_yinhuo。
+> 真机全流程回归：开始界面单次点击 → 开场动画 → 扫图 → 三关 → 两次奖励 → 山鬼全通 / 失败重试；记录弱点位置、UI 安全区、结束回合与手牌是否挡操作。
 
 **次选（发布/演示）：**
 
-> 真机门闩：仅 ImageTarget 识别成功后开战；Editor 保留 skipAR；并列出三关回归检查清单。
+> 真机门闩：开始界面完成且 ImageTarget 识别成功后才开战；Editor 保留 skipAR；避免开场动画结束时绕过识别门槛。
 
 **再次选（表现）：**
 
@@ -225,13 +236,14 @@ Assets/Editor/             # 一键配置菜单（见下）
 
 ## 10. 快速自测清单（改完必过）
 
-1. Play：自动进第 1 关，开局 4 张（斩斩护聚一类教学序），符匣剩余正确。  
+1. Play：显示一次开始界面；单次点击播放动画，结束后才进入第 1 关；开局 4 张（斩斩护聚一类教学序），符匣剩余正确。
 2. 红/黄/紫意图切换时只有对应弱点亮。  
-3. 指向匹配弱点 → QTE → 成功加伤/破甲/打断。  
+3. 指向匹配弱点 → QTE → 成功加伤/破甲/打断；QTE 未结束时不可继续出牌。
 4. 击杀小妖 → 奖励三选一 → 石灵 32HP/有甲。  
 5. 击杀石灵 → 再选奖励 → 山鬼 55HP。  
 6. 失败 → 重试本关；全通 → 再来一局。  
-7. 手牌不过大、结束回合可点、中文不大量缺字。  
+7. 烈火符叠 1 层、炼火符叠 2 层灼烧；敌方行动后每层各扣 1 HP；引火诀每层引爆 3 点伤害并清空层数。
+8. 手牌不过大、结束回合可点、中文不大量缺字。
 
 ---
 
@@ -243,4 +255,4 @@ Assets/Editor/             # 一键配置菜单（见下）
 
 ---
 
-**交接结论**：核心玩法闭环（符匣 + 意图弱点 + QTE + 三关奖励）已可演示。新聊天请从 **§8 / §9** 选一条任务开干；优先 **灼烧卡效** 或 **真机全流程回归**。
+**交接结论**：核心玩法闭环（开始界面 + 符匣 + 意图弱点 + QTE + 灼烧构筑 + 三关奖励）已可演示。新聊天请从 **§8 / §9** 选一条任务开干；优先 **真机全流程回归**，再做 **Boss 差异化**。

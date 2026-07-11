@@ -32,18 +32,19 @@ public static class SetupCampaign
             EditorUtility.DisplayDialog("战役", "缺少 attack.asset", "OK");
             return;
         }
+        var fire = EnsureFireCard(attack);
 
         // ---- 奖励卡 ----
         var rLian = CreateReward("reward_lianzhan", "连斩符", CardType.Attack, WeaknessType.RedAttack,
             5, 0, 1, "造成5点伤害；命中红破绽可QTE", attack.cardImage);
-        var rHuo = CreateReward("reward_lianhuo", "炼火符", CardType.Attack, WeaknessType.RedAttack,
-            4, 0, 1, "造成4点伤害（火符占位）", attack.cardImage);
+        var rHuo = CreateReward("reward_lianhuo", "炼火符", CardType.Fire, WeaknessType.None,
+            3, 0, 1, "造成3点伤害，附加2层灼烧", attack.cardImage, CardSpecialEffect.ApplyBurn, 2);
         var rLing = CreateReward("reward_zhenhunling", "镇魂铃", CardType.Seal, WeaknessType.PurpleSeal,
             3, 0, 1, "造成3点伤害；命中紫点可打断", attack.cardImage);
         var rPozhen = CreateReward("reward_pozhen", "破阵斩", CardType.Attack, WeaknessType.RedAttack,
             10, 0, 2, "造成10点伤害", attack.cardImage);
-        var rYinhuo = CreateReward("reward_yinhuo", "引火诀", CardType.ArmorBreak, WeaknessType.YellowArmor,
-            5, 6, 1, "伤害并破甲", brk != null ? brk.cardImage : attack.cardImage);
+        var rYinhuo = CreateReward("reward_yinhuo", "引火诀", CardType.Fire, WeaknessType.None,
+            0, 0, 1, "引爆敌人身上的灼烧；每层造成3点伤害，然后清除灼烧", attack.cardImage, CardSpecialEffect.DetonateBurn, 3);
         var rDing = CreateReward("reward_dinghun", "定魂符", CardType.Seal, WeaknessType.PurpleSeal,
             8, 0, 2, "重伤并打断蓄力", seal != null ? seal.cardImage : attack.cardImage);
 
@@ -56,23 +57,24 @@ public static class SetupCampaign
         var fx1 = CreateFuXia("FuXia_XiaoYao", "小妖战符匣", 4, new List<CardDataSO>
         {
             attack, attack, defense, qi,
-            brk, attack,
-            seal, defense,
-            attack, brk
+            attack, fire,
+            defense, attack,
+            brk, seal
         });
         var fx2 = CreateFuXia("FuXia_ShiLing", "石灵战符匣", 4, new List<CardDataSO>
         {
             brk, attack, defense, qi,
-            attack, brk,
+            attack, fire,
             defense, attack,
-            seal, attack
+            attack, seal
         });
         var fx3 = CreateFuXia("FuXia_ShanGui", "山鬼战符匣", 4, new List<CardDataSO>
         {
-            seal, attack, defense, attack,
+            seal, attack, defense,
             brk, attack,
-            qi, defense,
-            attack, brk
+            qi,
+            fire, defense,
+            attack, attack
         });
 
         // ---- 关卡 ----
@@ -85,6 +87,19 @@ public static class SetupCampaign
         var stage3 = CreateStage("Stage_03_ShanGui", "第三关·山鬼", "山鬼", dataBoss, fx3,
             IntentBoss(8, 8, 18),
             null);
+        stage1.rewardInsertions = new List<BattleStageSO.RewardCardInsertion>();
+        stage2.rewardInsertions = new List<BattleStageSO.RewardCardInsertion>
+        {
+            new BattleStageSO.RewardCardInsertion { afterBaseCardsDrawn = 8, earnedRewardIndex = 0 }
+        };
+        stage3.rewardInsertions = new List<BattleStageSO.RewardCardInsertion>
+        {
+            new BattleStageSO.RewardCardInsertion { afterBaseCardsDrawn = 3, earnedRewardIndex = 0 },
+            new BattleStageSO.RewardCardInsertion { afterBaseCardsDrawn = 5, earnedRewardIndex = 1 }
+        };
+        EditorUtility.SetDirty(stage1);
+        EditorUtility.SetDirty(stage2);
+        EditorUtility.SetDirty(stage3);
 
         var campaign = AssetDatabase.LoadAssetAtPath<CampaignSO>(StageFolder + "/Campaign_Main.asset");
         if (campaign == null)
@@ -152,8 +167,30 @@ public static class SetupCampaign
         return AssetDatabase.LoadAssetAtPath<CardDataSO>($"{CardFolder}/{name}.asset");
     }
 
+    static CardDataSO EnsureFireCard(CardDataSO attack)
+    {
+        var fire = LoadCard("fire");
+        if (fire == null)
+        {
+            fire = ScriptableObject.CreateInstance<CardDataSO>();
+            AssetDatabase.CreateAsset(fire, CardFolder + "/fire.asset");
+        }
+        fire.cardName = "烈火符";
+        fire.cardImage = attack != null ? attack.cardImage : null;
+        fire.cost = 1;
+        fire.cardType = CardType.Fire;
+        fire.description = "造成4点伤害，附加1层灼烧";
+        fire.effectValue = 4;
+        fire.effectValue2 = 0;
+        fire.specialEffect = CardSpecialEffect.ApplyBurn;
+        fire.specialEffectValue = 1;
+        fire.weaknessTag = WeaknessType.None;
+        EditorUtility.SetDirty(fire);
+        return fire;
+    }
+
     static CardDataSO CreateReward(string file, string cname, CardType type, WeaknessType tag,
-        int effect, int e2, int cost, string desc, Sprite icon)
+        int effect, int e2, int cost, string desc, Sprite icon, CardSpecialEffect specialEffect = CardSpecialEffect.None, int specialEffectValue = 0)
     {
         string path = $"{CardFolder}/{file}.asset";
         var so = AssetDatabase.LoadAssetAtPath<CardDataSO>(path);
@@ -167,6 +204,8 @@ public static class SetupCampaign
         so.weaknessTag = tag;
         so.effectValue = effect;
         so.effectValue2 = e2;
+        so.specialEffect = specialEffect;
+        so.specialEffectValue = specialEffectValue;
         so.cost = cost;
         so.description = desc;
         if (icon != null) so.cardImage = icon;

@@ -14,6 +14,10 @@ public class BattleBootstrap : MonoBehaviour
     public TurnManager turnManager;
     public GameObject enemyVisualRoot;
 
+    [Header("开场界面（可空）")]
+    [Tooltip("存在且启用时，必须在开场动画播放结束后才开始战斗。")]
+    public StartIntroController startIntro;
+
     [Header("真机：无 AR 回调时也可手动开战")]
     public bool autoStartIfNoAR = true;
 
@@ -23,6 +27,17 @@ public class BattleBootstrap : MonoBehaviour
     {
         if (turnManager == null)
             turnManager = FindAnyObjectByType<TurnManager>();
+
+        if (startIntro == null)
+            startIntro = FindAnyObjectByType<StartIntroController>();
+
+        if (startIntro != null && startIntro.isActiveAndEnabled)
+        {
+            startIntro.IntroFinished -= BeginBattle;
+            startIntro.IntroFinished += BeginBattle;
+            Debug.Log("[BattleBootstrap] 等待开始界面与开场动画完成…");
+            return;
+        }
 
 #if UNITY_EDITOR
         if (skipARForEditor)
@@ -79,5 +94,11 @@ public class BattleBootstrap : MonoBehaviour
     {
         battleStarted = false;
         BeginBattle();
+    }
+
+    private void OnDestroy()
+    {
+        if (startIntro != null)
+            startIntro.IntroFinished -= BeginBattle;
     }
 }

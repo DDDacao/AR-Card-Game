@@ -16,6 +16,7 @@ MonoBehaviour:
   enemyDisplayName: "\u5C0F\u5996"
   enemyData: {fileID: 11400000, guid: f78ca60bb6ed58a419649cee49bb986d, type: 2}
   fuXiaOrder: {fileID: 11400000, guid: 97edfd3cd46dc7d4c9003f649d881ab5, type: 2}
+  rewardInsertions: []
   intentLoop:
   - kind: 0
     displayName: "\u666E\u901A\u653B\u51FB"

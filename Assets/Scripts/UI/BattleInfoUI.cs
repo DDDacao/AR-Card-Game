@@ -8,6 +8,7 @@ public class BattleInfoUI : MonoBehaviour
 {
     public TurnManager turnManager;
     public CardDeck cardDeck;
+    public CharacterStats enemyStats;
 
     public TextMeshProUGUI turnText;
     public TextMeshProUGUI deckCountText;
@@ -29,6 +30,8 @@ public class BattleInfoUI : MonoBehaviour
             turnManager = TurnManager.Instance != null ? TurnManager.Instance : FindAnyObjectByType<TurnManager>();
         if (cardDeck == null)
             cardDeck = FindAnyObjectByType<CardDeck>();
+        if (enemyStats == null && turnManager != null)
+            enemyStats = turnManager.enemyStats;
 
         if (turnManager != null)
         {
@@ -41,6 +44,12 @@ public class BattleInfoUI : MonoBehaviour
             turnManager.OnBattleStarted += Refresh;
             turnManager.OnPlayerTurnStarted += Refresh;
             turnManager.OnEnemyTurnStarted += Refresh;
+        }
+
+        if (enemyStats != null)
+        {
+            enemyStats.OnBurnChanged -= OnEnemyBurnChanged;
+            enemyStats.OnBurnChanged += OnEnemyBurnChanged;
         }
 
         if (enemyNameText != null)
@@ -58,12 +67,19 @@ public class BattleInfoUI : MonoBehaviour
             turnManager.OnPlayerTurnStarted -= Refresh;
             turnManager.OnEnemyTurnStarted -= Refresh;
         }
+        if (enemyStats != null)
+            enemyStats.OnBurnChanged -= OnEnemyBurnChanged;
     }
 
     private void Update()
     {
         if (deckCountText != null && cardDeck != null)
             deckCountText.text = $"符匣剩余：{cardDeck.DrawDeckCount}";
+    }
+
+    private void OnEnemyBurnChanged(int _)
+    {
+        Refresh();
     }
 
     public void Refresh()
@@ -81,9 +97,14 @@ public class BattleInfoUI : MonoBehaviour
             deckCountText.text = $"符匣剩余：{cardDeck.DrawDeckCount}";
 
         if (enemyIntentText != null)
-            enemyIntentText.text = string.IsNullOrEmpty(turnManager.CurrentEnemyIntent)
+        {
+            string intent = string.IsNullOrEmpty(turnManager.CurrentEnemyIntent)
                 ? "—"
                 : turnManager.CurrentEnemyIntent;
+            enemyIntentText.text = enemyStats != null && enemyStats.BurnStacks > 0
+                ? $"{intent}\n<color=#FF8A33>灼烧 {enemyStats.BurnStacks} 层</color>"
+                : intent;
+        }
 
         if (enemyNameText != null && !string.IsNullOrEmpty(enemyDisplayName))
             enemyNameText.text = enemyDisplayName;

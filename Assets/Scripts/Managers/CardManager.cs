@@ -86,6 +86,7 @@ public class CardManager : MonoBehaviour
             case CardType.Attack:
             case CardType.ArmorBreak:
             case CardType.Seal:
+            case CardType.Fire:
                 ResolveTargetedCard(card, player, enemy, hitWeakness, weakness);
                 return;
 
@@ -155,7 +156,23 @@ public class CardManager : MonoBehaviour
         switch (card.cardType)
         {
             case CardType.Attack:
+            case CardType.Fire:
                 enemy.TakeDamage(totalDmg);
+                if (card.specialEffect == CardSpecialEffect.ApplyBurn)
+                {
+                    int stacks = Mathf.Max(1, card.specialEffectValue);
+                    enemy.AddBurn(stacks);
+                    Debug.Log($"[CardManager] 【{card.cardName}】附加 {stacks} 层灼烧（当前 {enemy.BurnStacks} 层）。");
+                }
+                else if (card.specialEffect == CardSpecialEffect.DetonateBurn)
+                {
+                    int stacks = enemy.ConsumeBurn();
+                    int damagePerStack = Mathf.Max(1, card.specialEffectValue);
+                    int burstDamage = stacks * damagePerStack;
+                    if (burstDamage > 0)
+                        enemy.TakeDamage(burstDamage);
+                    Debug.Log($"[CardManager] 【{card.cardName}】引爆 {stacks} 层灼烧，额外造成 {burstDamage} 点伤害。");
+                }
                 Debug.Log(qteSuccess
                     ? $"[CardManager] QTE 成功！【{card.cardName}】造成 {totalDmg} 点伤害"
                     : $"[CardManager] 【{card.cardName}】造成 {baseDmg} 点伤害");
@@ -164,6 +181,15 @@ public class CardManager : MonoBehaviour
             case CardType.ArmorBreak:
                 // 破甲：先结算伤害；QTE 成功再额外破甲（effectValue2，默认等于 effectValue）
                 enemy.TakeDamage(totalDmg);
+                if (card.specialEffect == CardSpecialEffect.DetonateBurn)
+                {
+                    int stacks = enemy.ConsumeBurn();
+                    int damagePerStack = Mathf.Max(1, card.specialEffectValue);
+                    int burstDamage = stacks * damagePerStack;
+                    if (burstDamage > 0)
+                        enemy.TakeDamage(burstDamage);
+                    Debug.Log($"[CardManager] 【{card.cardName}】引爆 {stacks} 层灼烧，额外造成 {burstDamage} 点伤害。");
+                }
                 if (qteSuccess)
                 {
                     int strip = card.effectValue2 > 0 ? card.effectValue2 : card.effectValue;

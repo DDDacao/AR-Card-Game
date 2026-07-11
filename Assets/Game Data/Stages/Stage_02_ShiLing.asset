@@ -16,6 +16,9 @@ MonoBehaviour:
   enemyDisplayName: "\u77F3\u7075"
   enemyData: {fileID: 11400000, guid: 90fe9e2a483c5a9428a5e89cab678e7f, type: 2}
   fuXiaOrder: {fileID: 11400000, guid: 904ade15b01a3a04ba724c04c835f3d8, type: 2}
+  rewardInsertions:
+  - afterBaseCardsDrawn: 8
+    earnedRewardIndex: 0
   intentLoop:
   - kind: 1
     displayName: "\u6B63\u5728\u9632\u5FA1"

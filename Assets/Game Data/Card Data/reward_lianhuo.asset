@@ -15,8 +15,10 @@ MonoBehaviour:
   cardName: "\u70BC\u706B\u7B26"
   cardImage: {fileID: 21300000, guid: 639cd9f76ccd84e70904b8eba30af0fb, type: 3}
   cost: 1
-  cardType: 0
-  description: "\u9020\u62104\u70B9\u4F24\u5BB3\uFF08\u706B\u7B26\u5360\u4F4D\uFF09"
-  effectValue: 4
+  cardType: 5
+  description: "\u9020\u62103\u70B9\u4F24\u5BB3\uFF0C\u9644\u52A02\u5C42\u707C\u70E7"
+  effectValue: 3
   effectValue2: 0
-  weaknessTag: 1
+  specialEffect: 1
+  specialEffectValue: 2
+  weaknessTag: 0

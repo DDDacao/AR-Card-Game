@@ -8,6 +8,15 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "BattleStage", menuName = "Campaign/BattleStageSO")]
 public class BattleStageSO : ScriptableObject
 {
+    [Serializable]
+    public class RewardCardInsertion
+    {
+        [Tooltip("已从基础符匣抽出的牌数达到此值时，先插入奖励牌。")]
+        [Min(0)] public int afterBaseCardsDrawn;
+        [Tooltip("earnedRewards 中的下标：0 为第一张奖励，1 为第二张奖励。")]
+        [Min(0)] public int earnedRewardIndex;
+    }
+
     public string stageName = "小妖";
     public string enemyDisplayName = "小妖";
 
@@ -16,6 +25,9 @@ public class BattleStageSO : ScriptableObject
 
     [Header("符匣固定顺序")]
     public FuXiaOrderSO fuXiaOrder;
+
+    [Header("已获奖励的固定插入时机")]
+    public List<RewardCardInsertion> rewardInsertions = new List<RewardCardInsertion>();
 
     [Header("意图循环（空则用 EnemyIntentController 默认）")]
     public List<EnemyIntentController.IntentStep> intentLoop = new List<EnemyIntentController.IntentStep>();

@@ -6,7 +6,18 @@ public enum CardType
     Defense,     // 防御
     Ability,     // 技能
     ArmorBreak,  // 破甲 — 黄弱点
-    Seal         // 镇魂 — 紫弱点
+    Seal,        // 镇魂 — 紫弱点
+    Fire         // 火符 — 命中敌人后附加或引爆灼烧
+}
+
+/// <summary>
+/// 卡牌在基础类型结算之外附带的状态效果。
+/// </summary>
+public enum CardSpecialEffect
+{
+    None = 0,
+    ApplyBurn = 1,
+    DetonateBurn = 2
 }
 
 /// <summary>

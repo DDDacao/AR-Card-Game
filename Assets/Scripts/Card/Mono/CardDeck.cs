@@ -22,8 +22,14 @@ public class CardDeck : MonoBehaviour
     [Tooltip("为 true 且配置了 FuXiaOrder 时使用固定顺序")]
     public bool useFixedOrder = true;
 
-    [Tooltip("运行时插入符匣头部的牌（奖励符等，不写入 SO）")]
+    [Tooltip("旧版兼容字段。奖励卡请改用 runtimeRewardInsertions 指定固定插入时机。")]
     public List<CardDataSO> runtimePrefixCards = new List<CardDataSO>();
+
+    [Tooltip("运行时已获得的奖励卡；由战役流程提供，不写入 SO。")]
+    public List<CardDataSO> runtimeEarnedRewards = new List<CardDataSO>();
+
+    [Tooltip("奖励卡插入基础符匣的固定时机；由关卡 SO 提供，不写入 SO。")]
+    public List<BattleStageSO.RewardCardInsertion> runtimeRewardInsertions = new List<BattleStageSO.RewardCardInsertion>();
 
     [Header("手牌上限")]
     public int handLimit = DefaultHandLimit;
@@ -35,6 +41,8 @@ public class CardDeck : MonoBehaviour
     private List<CardDataSO> drawDeck = new();   // 符匣剩余
     private List<Card> handCardObjectList = new();
     private List<CardDataSO> consumedThisBattle = new(); // 本场已使用（仅记录）
+    private readonly HashSet<int> usedRewardInsertionIndexes = new();
+    private int baseCardsDrawn;
 
     public int HandCount => handCardObjectList.Count;
     public int DrawDeckCount => drawDeck.Count;
@@ -47,6 +55,8 @@ public class CardDeck : MonoBehaviour
         drawDeck.Clear();
         handCardObjectList.Clear();
         consumedThisBattle.Clear();
+        usedRewardInsertionIndexes.Clear();
+        baseCardsDrawn = 0;
 
         if (cardManager == null)
             cardManager = FindAnyObjectByType<CardManager>();
@@ -54,7 +64,7 @@ public class CardDeck : MonoBehaviour
         if (useFixedOrder && fuXiaOrder != null && fuXiaOrder.TotalCount > 0)
         {
             drawDeck = fuXiaOrder.CreateRuntimeQueue();
-            // 奖励符插入头部（本场可抽到）
+            // 旧版前缀保留兼容，正式战役使用固定插入时机。
             if (runtimePrefixCards != null && runtimePrefixCards.Count > 0)
             {
                 for (int i = runtimePrefixCards.Count - 1; i >= 0; i--)
@@ -63,7 +73,7 @@ public class CardDeck : MonoBehaviour
                         drawDeck.Insert(0, runtimePrefixCards[i]);
                 }
             }
-            Debug.Log($"[CardDeck] 符匣固定顺序加载：{fuXiaOrder.displayName}，共 {drawDeck.Count} 张（含奖励前缀 {runtimePrefixCards?.Count ?? 0}）");
+            Debug.Log($"[CardDeck] 符匣固定顺序加载：{fuXiaOrder.displayName}，基础 {drawDeck.Count} 张，奖励插入点 {runtimeRewardInsertions?.Count ?? 0} 个。");
             return;
         }
 
@@ -111,14 +121,11 @@ public class CardDeck : MonoBehaviour
                 break;
             }
 
-            if (drawDeck.Count == 0)
+            if (!TryTakeNextCard(out CardDataSO currentCardData))
             {
                 Debug.LogWarning("[CardDeck] 符匣已空，无法继续补牌！");
                 break;
             }
-
-            CardDataSO currentCardData = drawDeck[0];
-            drawDeck.RemoveAt(0);
 
             var cardObj = cardManager.GetCardObj();
 
@@ -141,6 +148,40 @@ public class CardDeck : MonoBehaviour
         }
 
         return drawn;
+    }
+
+    private bool TryTakeNextCard(out CardDataSO card)
+    {
+        card = null;
+
+        if (runtimeRewardInsertions != null)
+        {
+            for (int i = 0; i < runtimeRewardInsertions.Count; i++)
+            {
+                if (usedRewardInsertionIndexes.Contains(i)) continue;
+                var insertion = runtimeRewardInsertions[i];
+                if (insertion == null || insertion.afterBaseCardsDrawn != baseCardsDrawn) continue;
+
+                usedRewardInsertionIndexes.Add(i);
+                if (runtimeEarnedRewards != null
+                    && insertion.earnedRewardIndex >= 0
+                    && insertion.earnedRewardIndex < runtimeEarnedRewards.Count
+                    && runtimeEarnedRewards[insertion.earnedRewardIndex] != null)
+                {
+                    card = runtimeEarnedRewards[insertion.earnedRewardIndex];
+                    Debug.Log($"[CardDeck] 按关卡计划插入奖励符【{card.cardName}】（基础已抽 {baseCardsDrawn} 张）。");
+                    return true;
+                }
+
+                Debug.LogWarning($"[CardDeck] 奖励插入点缺少第 {insertion.earnedRewardIndex + 1} 张奖励，跳过。");
+            }
+        }
+
+        if (drawDeck.Count == 0) return false;
+        card = drawDeck[0];
+        drawDeck.RemoveAt(0);
+        baseCardsDrawn++;
+        return card != null;
     }
 
     public int DrawUpTo(int targetHandCount)
@@ -197,6 +238,8 @@ public class CardDeck : MonoBehaviour
         DiscardHand();
         drawDeck.Clear();
         consumedThisBattle.Clear();
+        usedRewardInsertionIndexes.Clear();
+        baseCardsDrawn = 0;
     }
 
     /// <summary>

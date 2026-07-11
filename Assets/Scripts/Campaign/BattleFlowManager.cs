@@ -124,12 +124,16 @@ public class BattleFlowManager : MonoBehaviour
             turnManager.enemyStats.templateData = stage.enemyData;
         }
 
-        // 符匣：本关顺序 + 已获奖励插在开局序列前（奖励进符匣头部，开局更容易摸到）
+        // 符匣：基础牌按关卡固定顺序发放，已获奖励按策划指定的基础抽牌节点插入。
         if (cardDeck != null)
         {
             cardDeck.useFixedOrder = true;
             cardDeck.fuXiaOrder = stage.fuXiaOrder;
-            cardDeck.runtimePrefixCards = new List<CardDataSO>(earnedRewards);
+            cardDeck.runtimePrefixCards = new List<CardDataSO>();
+            cardDeck.runtimeEarnedRewards = new List<CardDataSO>(earnedRewards);
+            cardDeck.runtimeRewardInsertions = stage.rewardInsertions != null
+                ? new List<BattleStageSO.RewardCardInsertion>(stage.rewardInsertions)
+                : new List<BattleStageSO.RewardCardInsertion>();
         }
 
         // 意图

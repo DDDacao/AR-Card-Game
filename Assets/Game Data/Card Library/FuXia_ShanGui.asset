@@ -17,11 +17,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3b780858b3d59f443acdac1d2064caea, type: 2}
   - {fileID: 11400000, guid: 0faf4abde39b479498344547f7a17390, type: 2}
   - {fileID: 11400000, guid: d3946fd7c98694e4bace7ae532758c59, type: 2}
-  - {fileID: 11400000, guid: 0faf4abde39b479498344547f7a17390, type: 2}
   - {fileID: 11400000, guid: 6402ca363124855438c679269c2c83ad, type: 2}
   - {fileID: 11400000, guid: 0faf4abde39b479498344547f7a17390, type: 2}
   - {fileID: 11400000, guid: f7a72e243c332b14fb1c5753cdcebd4b, type: 2}
+  - {fileID: 11400000, guid: 9a4e17bf8a5780e45ae6917ba1d01e41, type: 2}
   - {fileID: 11400000, guid: d3946fd7c98694e4bace7ae532758c59, type: 2}
   - {fileID: 11400000, guid: 0faf4abde39b479498344547f7a17390, type: 2}
-  - {fileID: 11400000, guid: 6402ca363124855438c679269c2c83ad, type: 2}
+  - {fileID: 11400000, guid: 0faf4abde39b479498344547f7a17390, type: 2}
   initialHandSize: 4
