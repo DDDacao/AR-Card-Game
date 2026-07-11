@@ -25,10 +25,29 @@ public class Card : MonoBehaviour, IPointerEnterHandler,IPointerExitHandler
     public void Init(CardDataSO data)
     {
         cardData = data;
-        cardSprite.sprite = data.cardImage;
-        costText.text = data.cost.ToString();
-        descriptionText.text = data.description;
-        typeText.text = data.cardType.ToString();
+        if (data == null) return;
+
+        if (cardSprite != null)
+            cardSprite.sprite = data.cardImage;
+        if (costText != null)
+            costText.text = data.cost.ToString();
+        if (descriptionText != null)
+            descriptionText.text = data.description;
+        if (typeText != null)
+            typeText.text = GetTypeLabel(data.cardType);
+    }
+
+    private static string GetTypeLabel(CardType type)
+    {
+        switch (type)
+        {
+            case CardType.Attack: return "攻击";
+            case CardType.Defense: return "防御";
+            case CardType.Ability: return "技能";
+            case CardType.ArmorBreak: return "破甲";
+            case CardType.Seal: return "镇魂";
+            default: return type.ToString();
+        }
     }
 
     public void UpdatePosition(Vector3 position)

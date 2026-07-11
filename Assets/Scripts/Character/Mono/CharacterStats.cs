@@ -89,7 +89,8 @@ public class CharacterStats : MonoBehaviour
     private void Die()
     {
         Debug.Log($"{gameObject.name} 死亡了！");
-        // TODO: 触发死亡动画或结算面板
+        if (TurnManager.Instance != null)
+            TurnManager.Instance.NotifyCharacterDied(this);
     }
     #endregion
 
@@ -105,6 +106,18 @@ public class CharacterStats : MonoBehaviour
     {
         currentArmor = 0;
         OnArmorChanged?.Invoke(currentArmor);
+    }
+
+    /// <summary>
+    /// 破甲：直接削减护甲（可减到 0）
+    /// </summary>
+    public int StripArmor(int amount)
+    {
+        if (amount <= 0 || currentArmor <= 0) return 0;
+        int stripped = Mathf.Min(amount, currentArmor);
+        currentArmor -= stripped;
+        OnArmorChanged?.Invoke(currentArmor);
+        return stripped;
     }
     #endregion
 

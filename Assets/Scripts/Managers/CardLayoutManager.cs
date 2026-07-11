@@ -4,8 +4,10 @@ using UnityEngine;
 public class CardLayoutManager : MonoBehaviour
 {
     public bool isHorizontal;
-    public float maxWidth = 7f;
-    public float cardSpacing = 2f;
+    [Tooltip("手牌扇区最大宽度（世界单位，配合更小卡牌可略收紧）")]
+    public float maxWidth = 5.5f;
+    [Tooltip("卡牌基础间距")]
+    public float cardSpacing = 1.55f;
     public Vector3 centerPoint;
 
     [SerializeField] private List<Vector3> cardPositions = new();

@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96d08d58756fd4c41a476c41fbe78d35, type: 3}
   m_Name: attack
   m_EditorClassIdentifier: Assembly-CSharp::CardDataSO
-  cardName: "\u653B\u51FB"
+  cardName: "\u65A9\u5996\u7B26"
   cardImage: {fileID: 21300000, guid: 639cd9f76ccd84e70904b8eba30af0fb, type: 3}
   cost: 1
   cardType: 0
-  description: "\u653B\u51FB6\u70B9\u4F24\u5BB3"
+  description: "\u9020\u62106\u70B9\u4F24\u5BB3\uFF1B\u547D\u4E2D\u7EA2\u7834\u7EFD\u53EFQTE"
   effectValue: 6
   effectValue2: 0
+  weaknessTag: 1

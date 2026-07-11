@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections;
 
 public class TurnManager : MonoBehaviour
@@ -12,12 +13,33 @@ public class TurnManager : MonoBehaviour
     [Header("发牌器")]
     public CardDeck cardDeck;
 
-    [Header("战斗数值配置")]
-    public int enemyAttackDamage = 6;
-    public int drawCardAmount = 3;
+    [Header("敌人意图（可空，自动在敌人身上找）")]
+    public EnemyIntentController enemyIntent;
 
-    private bool isPlayerTurn = true;
+    [Header("战斗数值配置")]
+    public int enemyAttackDamage = 5;
+    public int initialDrawAmount = 4;
+    public int drawPerTurn = 2;
+    public string defaultEnemyIntent = "普通攻击";
+
+    [Header("状态")]
+    [SerializeField] private bool isBattleActive;
+    [SerializeField] private bool isPlayerTurn = true;
+    [SerializeField] private int currentTurnIndex;
+    [SerializeField] private string currentEnemyIntent = "普通攻击";
+    [SerializeField] private bool battleEnded;
+
+    public bool IsBattleActive => isBattleActive;
     public bool IsPlayerTurn => isPlayerTurn;
+    public int CurrentTurnIndex => currentTurnIndex;
+    public string CurrentEnemyIntent => currentEnemyIntent;
+    public bool BattleEnded => battleEnded;
+
+    public event Action OnBattleStarted;
+    public event Action OnPlayerTurnStarted;
+    public event Action OnEnemyTurnStarted;
+    public event Action OnTurnInfoChanged;
+    public event Action<bool> OnBattleEnded;
 
     private void Awake()
     {
@@ -26,17 +48,25 @@ public class TurnManager : MonoBehaviour
 
     private void Start()
     {
-        // 自动查找组件（如果面板没拖拽赋值）
+        ResolveReferences();
+        if (FindAnyObjectByType<BattleBootstrap>() == null)
+        {
+            StartBattle();
+        }
+    }
+
+    public void ResolveReferences()
+    {
         if (playerStats == null)
         {
             GameObject playerGo = GameObject.Find("Player");
             if (playerGo == null) playerGo = GameObject.Find("PlayerManager");
             if (playerGo != null) playerStats = playerGo.GetComponent<CharacterStats>();
         }
-        
+
         if (enemyStats == null)
         {
-            CharacterStats[] allStats = FindObjectsByType<CharacterStats>();
+            CharacterStats[] allStats = FindObjectsByType<CharacterStats>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             foreach (var stat in allStats)
             {
                 if (stat.gameObject.name != "Player" && stat.gameObject.name != "PlayerManager")
@@ -47,84 +77,186 @@ public class TurnManager : MonoBehaviour
             }
         }
 
+        if (enemyIntent == null && enemyStats != null)
+        {
+            enemyIntent = enemyStats.GetComponent<EnemyIntentController>();
+            if (enemyIntent == null)
+                enemyIntent = enemyStats.GetComponentInChildren<EnemyIntentController>();
+            if (enemyIntent == null)
+                enemyIntent = enemyStats.gameObject.AddComponent<EnemyIntentController>();
+        }
+
         if (cardDeck == null)
-        {
             cardDeck = FindAnyObjectByType<CardDeck>();
-        }
-
-        // 确保发牌器在抽牌前，先完成卡组数据的初始化（防止执行顺序冲突导致抽牌为空）
-        if (cardDeck != null)
-        {
-            cardDeck.InitializeDeck();
-        }
-
-        // 开启第一回合
-        StartPlayerTurn();
     }
 
-    /// <summary>
-    /// 开始玩家回合
-    /// </summary>
+    public void StartBattle()
+    {
+        StopAllCoroutines();
+        ResolveReferences();
+
+        battleEnded = false;
+        isBattleActive = true;
+        isPlayerTurn = true;
+        currentTurnIndex = 0;
+        currentEnemyIntent = defaultEnemyIntent;
+
+        if (playerStats != null) playerStats.InitializeStats();
+        if (enemyStats != null) enemyStats.InitializeStats();
+
+        if (enemyIntent != null)
+        {
+            enemyIntent.stats = enemyStats;
+            // 战役关卡可覆写意图表（ApplyStage 已写入 intentLoop）
+            enemyIntent.RefreshWeaknessList();
+            enemyIntent.ResetIntent();
+            currentEnemyIntent = enemyIntent.CurrentDisplayName;
+        }
+
+        if (cardDeck != null)
+        {
+            cardDeck.ClearAllForBattleReset();
+            cardDeck.InitializeDeck();
+            // 符匣固定顺序：开局张数由 FuXiaOrderSO.initialHandSize 决定
+            cardDeck.DrawInitialHand(initialDrawAmount);
+        }
+
+        currentTurnIndex = 1;
+        BeginPlayerTurnCore(false);
+        OnBattleStarted?.Invoke();
+        OnTurnInfoChanged?.Invoke();
+        Debug.Log("[TurnManager] 战斗开始！");
+    }
+
+    public void StopBattle()
+    {
+        isBattleActive = false;
+        StopAllCoroutines();
+    }
+
+    private void BeginPlayerTurnCore(bool drawCards)
+    {
+        if (battleEnded || !isBattleActive) return;
+
+        isPlayerTurn = true;
+        Debug.Log($"[TurnManager] 玩家回合开始（第 {currentTurnIndex} 回合）");
+
+        if (playerStats != null)
+            playerStats.ResetEnergy();
+
+        // 展示本回合敌人意图与对应弱点
+        if (enemyIntent != null)
+        {
+            enemyIntent.PresentIntentForPlayerTurn();
+            currentEnemyIntent = enemyIntent.CurrentDisplayName;
+        }
+        else
+        {
+            currentEnemyIntent = defaultEnemyIntent;
+        }
+
+        if (drawCards && cardDeck != null)
+            cardDeck.DrawRespectingHandLimit(drawPerTurn);
+
+        OnPlayerTurnStarted?.Invoke();
+        OnTurnInfoChanged?.Invoke();
+    }
+
     public void StartPlayerTurn()
     {
-        isPlayerTurn = true;
-        Debug.Log("[TurnManager] 玩家回合开始！");
-
-        // 1. 重置能量/灵气
-        if (playerStats != null)
-        {
-            playerStats.ResetEnergy();
-        }
-
-        // 2. 玩家抽牌
-        if (cardDeck != null)
-        {
-            cardDeck.DrawCard(drawCardAmount);
-        }
+        BeginPlayerTurnCore(true);
     }
 
-    /// <summary>
-    /// 结束玩家回合（点击结束回合按钮调用）
-    /// </summary>
     public void EndPlayerTurn()
     {
+        if (!isBattleActive || battleEnded) return;
         if (!isPlayerTurn) return;
+        if (QTEManager.Instance != null && QTEManager.Instance.IsRunning)
+        {
+            Debug.LogWarning("[TurnManager] QTE 进行中，无法结束回合。");
+            return;
+        }
 
         isPlayerTurn = false;
         Debug.Log("[TurnManager] 玩家回合结束！");
-
-        // 1. 弃掉所有手牌
-        if (cardDeck != null)
-        {
-            cardDeck.DiscardHand();
-        }
-
-        // 2. 进入怪物回合（协程延时，体现怪物动作停顿）
         StartCoroutine(EnemyTurnCoroutine());
     }
 
     private IEnumerator EnemyTurnCoroutine()
     {
-        Debug.Log("[TurnManager] 怪物回合开始！");
-        yield return new WaitForSeconds(1.5f); // 停顿1.5秒，模拟思考时间
+        if (battleEnded || !isBattleActive) yield break;
 
-        // 1. 怪物反击
-        if (enemyStats != null && playerStats != null)
+        Debug.Log("[TurnManager] 怪物回合开始！");
+        OnEnemyTurnStarted?.Invoke();
+        OnTurnInfoChanged?.Invoke();
+
+        yield return new WaitForSeconds(1.2f);
+
+        if (battleEnded || !isBattleActive) yield break;
+
+        if (enemyStats != null && enemyStats.CurrentHP > 0)
         {
-            // 确保怪物还活着
-            if (enemyStats.CurrentHP > 0)
+            if (enemyIntent != null)
             {
-                Debug.Log($"[TurnManager] {enemyStats.gameObject.name} 发起攻击，对玩家造成 {enemyAttackDamage} 点伤害！");
+                enemyIntent.ExecuteAndAdvance(playerStats);
+            }
+            else if (playerStats != null)
+            {
                 playerStats.TakeDamage(enemyAttackDamage);
-                
-                // 怪物回合结束时，清除怪物身上的护甲（卡牌游戏常规设定）
                 enemyStats.ClearArmor();
             }
         }
 
-        yield return new WaitForSeconds(1.0f); // 动作完再停顿1秒
+        if (CheckBattleEnd()) yield break;
 
-        // 2. 回到玩家回合
+        yield return new WaitForSeconds(0.8f);
+
+        if (battleEnded || !isBattleActive) yield break;
+
+        currentTurnIndex++;
         StartPlayerTurn();
+    }
+
+    public void NotifyCharacterDied(CharacterStats stats)
+    {
+        if (battleEnded || !isBattleActive) return;
+        CheckBattleEnd();
+    }
+
+    public bool CheckBattleEnd()
+    {
+        if (battleEnded) return true;
+
+        if (enemyStats != null && enemyStats.CurrentHP <= 0)
+        {
+            EndBattle(true);
+            return true;
+        }
+
+        if (playerStats != null && playerStats.CurrentHP <= 0)
+        {
+            EndBattle(false);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void EndBattle(bool playerWon)
+    {
+        if (battleEnded) return;
+        battleEnded = true;
+        isBattleActive = false;
+        isPlayerTurn = false;
+        StopAllCoroutines();
+
+        Debug.Log(playerWon ? "[TurnManager] 封印成功！玩家胜利。" : "[TurnManager] 封印失败！玩家战败。");
+        OnBattleEnded?.Invoke(playerWon);
+        OnTurnInfoChanged?.Invoke();
+    }
+
+    public void RestartBattle()
+    {
+        StartBattle();
     }
 }

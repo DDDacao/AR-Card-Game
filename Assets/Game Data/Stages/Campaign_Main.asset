@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0964ed8c1e85baa47b01524411929537, type: 3}
+  m_Name: Campaign_Main
+  m_EditorClassIdentifier: Assembly-CSharp::CampaignSO
+  campaignName: "\u5C01\u5996\u8BD5\u70BC"
+  stages:
+  - {fileID: 11400000, guid: 2e3c38cebb8d7e948be46f3aae5d793a, type: 2}
+  - {fileID: 11400000, guid: 6ac8daf6b5bd7cc43a7a88df35dd7014, type: 2}
+  - {fileID: 11400000, guid: 0bc9ebc94eed8804792287c8ccfe57b5, type: 2}

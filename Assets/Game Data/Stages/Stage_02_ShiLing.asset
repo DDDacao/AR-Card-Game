@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a9110d9a67825a4e839426a9c226136, type: 3}
+  m_Name: Stage_02_ShiLing
+  m_EditorClassIdentifier: Assembly-CSharp::BattleStageSO
+  stageName: "\u7B2C\u4E8C\u5173\xB7\u77F3\u7075"
+  enemyDisplayName: "\u77F3\u7075"
+  enemyData: {fileID: 11400000, guid: 90fe9e2a483c5a9428a5e89cab678e7f, type: 2}
+  fuXiaOrder: {fileID: 11400000, guid: 904ade15b01a3a04ba724c04c835f3d8, type: 2}
+  intentLoop:
+  - kind: 1
+    displayName: "\u6B63\u5728\u9632\u5FA1"
+    exposedWeakness: 2
+    power: 5
+    armorGain: 8
+  - kind: 0
+    displayName: "\u666E\u901A\u653B\u51FB"
+    exposedWeakness: 1
+    power: 6
+    armorGain: 0
+  - kind: 1
+    displayName: "\u6B63\u5728\u9632\u5FA1"
+    exposedWeakness: 2
+    power: 5
+    armorGain: 6
+  - kind: 2
+    displayName: "\u84C4\u529B\u4E2D"
+    exposedWeakness: 3
+    power: 10
+    armorGain: 0
+  rewardChoices:
+  - {fileID: 11400000, guid: 4a77c52c76fba404fa8e29ee18fec5c5, type: 2}
+  - {fileID: 11400000, guid: b51421ba6a5efd54b89a97a31af9e239, type: 2}
+  - {fileID: 11400000, guid: 04db7434ffdd7cc4b80a0be277cdbccc, type: 2}

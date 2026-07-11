@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -9,11 +8,13 @@ public class CardManager : MonoBehaviour
     public static CardManager Instance { get; private set; }
 
     public PoolTool poolTool;
-    public List<CardDataSO> cardDataList;  // 游戏中所有可能出现的卡牌
+    public List<CardDataSO> cardDataList;
 
-    public CardLibrarySO newGameCardLibrary; // 新游戏时使用的卡牌库
+    public CardLibrarySO newGameCardLibrary;
+    public CardLibrarySO currentLibrary;
 
-    public CardLibrarySO currentLibrary;     // 当前使用的卡牌库
+    [Header("QTE 成功额外伤害倍率（追加 = base * 该值）")]
+    public float qteBonusMultiplier = 1f;
 
     private void Awake()
     {
@@ -21,13 +22,22 @@ public class CardManager : MonoBehaviour
 
         InitializeCardDataList();
 
-        foreach(var item in newGameCardLibrary.cardLibraryList){
-            currentLibrary.cardLibraryList.Add(item); 
-        } 
+        if (currentLibrary != null)
+            currentLibrary.cardLibraryList.Clear();
+
+        if (newGameCardLibrary != null && currentLibrary != null)
+        {
+            foreach (var item in newGameCardLibrary.cardLibraryList)
+            {
+                currentLibrary.cardLibraryList.Add(item);
+            }
+        }
     }
 
-    private void OnDisable() {
-        currentLibrary.cardLibraryList.Clear();
+    private void OnDisable()
+    {
+        if (currentLibrary != null)
+            currentLibrary.cardLibraryList.Clear();
     }
 
 #region 初始化卡牌数据
@@ -50,54 +60,141 @@ public class CardManager : MonoBehaviour
     }
 #endregion
 
-public GameObject GetCardObj(){
-
-    var cardObj = poolTool.GetObj();
-    cardObj.transform.localScale = Vector3.zero;
-    
-    return cardObj;
-}
-public void ReleaseCardObj(GameObject obj){
-    poolTool.ReleaseObj(obj);
-}
-
-/// <summary>
-/// 执行卡牌效果的主入口 (集中判定模式)
-/// </summary>
-public void ExecuteCard(CardDataSO card, CharacterStats player, CharacterStats enemy)
-{
-    if (card == null) return;
-
-    switch (card.cardType)
+    public GameObject GetCardObj()
     {
-        case CardType.Attack:
-            if (enemy != null)
-            {
-                enemy.TakeDamage(card.effectValue);
-                Debug.Log($"[CardManager] 使用攻击牌【{card.cardName}】，对 {enemy.gameObject.name} 造成了 {card.effectValue} 点伤害！");
-            }
-            else
-            {
-                Debug.LogWarning("[CardManager] 攻击失败，当前没有目标敌人！");
-            }
-            break;
-
-        case CardType.Defense:
-            if (player != null)
-            {
-                player.AddArmor(card.effectValue);
-                Debug.Log($"[CardManager] 使用防御牌【{card.cardName}】，主角获得 {card.effectValue} 点护甲！");
-            }
-            break;
-
-        case CardType.Ability:
-            // 比如聚气诀
-            if (card.cardName == "聚气诀" && player != null)
-            {
-                player.AddEnergy(card.effectValue);
-                Debug.Log($"[CardManager] 使用技能牌【{card.cardName}】，主角回复了 {card.effectValue} 点灵气！");
-            }
-            break;
+        var cardObj = poolTool.GetObj();
+        cardObj.transform.localScale = Vector3.zero;
+        return cardObj;
     }
-}
+
+    public void ReleaseCardObj(GameObject obj)
+    {
+        poolTool.ReleaseObj(obj);
+    }
+
+    public void ExecuteCard(CardDataSO card, CharacterStats player, CharacterStats enemy)
+    {
+        ExecuteCard(card, player, enemy, false, null);
+    }
+
+    public void ExecuteCard(CardDataSO card, CharacterStats player, CharacterStats enemy, bool hitWeakness, WeaknessPoint weakness)
+    {
+        if (card == null) return;
+
+        switch (card.cardType)
+        {
+            case CardType.Attack:
+            case CardType.ArmorBreak:
+            case CardType.Seal:
+                ResolveTargetedCard(card, player, enemy, hitWeakness, weakness);
+                return;
+
+            case CardType.Defense:
+                if (player != null)
+                {
+                    player.AddArmor(card.effectValue);
+                    Debug.Log($"[CardManager] 使用防御牌【{card.cardName}】，主角获得 {card.effectValue} 点护甲！");
+                }
+                break;
+
+            case CardType.Ability:
+                if (player != null)
+                {
+                    int energyGain = card.effectValue > 0 ? card.effectValue : card.effectValue2;
+                    if (energyGain <= 0) energyGain = 1;
+                    player.AddEnergy(energyGain);
+                    Debug.Log($"[CardManager] 使用技能牌【{card.cardName}】，主角回复了 {energyGain} 点灵气！");
+                }
+                break;
+        }
+
+        if (TurnManager.Instance != null)
+            TurnManager.Instance.CheckBattleEnd();
+    }
+
+    private void ResolveTargetedCard(CardDataSO card, CharacterStats player, CharacterStats enemy, bool hitWeakness, WeaknessPoint weakness)
+    {
+        if (enemy == null)
+        {
+            Debug.LogWarning($"[CardManager] 【{card.cardName}】失败，没有目标敌人！");
+            return;
+        }
+
+        bool canQte = hitWeakness
+                      && weakness != null
+                      && card.ResolveWeaknessTag() != WeaknessType.None
+                      && weakness.weaknessType == card.ResolveWeaknessTag();
+
+        if (canQte && QTEManager.Instance != null)
+        {
+            Debug.Log($"[CardManager] 命中弱点【{weakness.weaknessType}】，触发 QTE！牌：{card.cardName}");
+            QTEManager.Instance.StartClickQTE(success =>
+            {
+                ApplyTargetedEffect(card, enemy, success);
+                if (TurnManager.Instance != null)
+                    TurnManager.Instance.CheckBattleEnd();
+            });
+        }
+        else
+        {
+            ApplyTargetedEffect(card, enemy, false);
+            if (TurnManager.Instance != null)
+                TurnManager.Instance.CheckBattleEnd();
+        }
+    }
+
+    private void ApplyTargetedEffect(CardDataSO card, CharacterStats enemy, bool qteSuccess)
+    {
+        if (enemy == null || card == null) return;
+
+        int baseDmg = card.effectValue;
+        int totalDmg = baseDmg;
+        if (qteSuccess)
+            totalDmg = baseDmg + Mathf.RoundToInt(baseDmg * qteBonusMultiplier);
+
+        switch (card.cardType)
+        {
+            case CardType.Attack:
+                enemy.TakeDamage(totalDmg);
+                Debug.Log(qteSuccess
+                    ? $"[CardManager] QTE 成功！【{card.cardName}】造成 {totalDmg} 点伤害"
+                    : $"[CardManager] 【{card.cardName}】造成 {baseDmg} 点伤害");
+                break;
+
+            case CardType.ArmorBreak:
+                // 破甲：先结算伤害；QTE 成功再额外破甲（effectValue2，默认等于 effectValue）
+                enemy.TakeDamage(totalDmg);
+                if (qteSuccess)
+                {
+                    int strip = card.effectValue2 > 0 ? card.effectValue2 : card.effectValue;
+                    int stripped = enemy.StripArmor(strip);
+                    Debug.Log($"[CardManager] QTE 成功！【{card.cardName}】伤害 {totalDmg}，破甲 {stripped}");
+                }
+                else
+                {
+                    // 未 QTE 时也对护甲有小额破甲（策划：对护甲额外有效）
+                    int strip = Mathf.Max(2, card.effectValue / 2);
+                    int stripped = enemy.StripArmor(strip);
+                    Debug.Log($"[CardManager] 【{card.cardName}】伤害 {baseDmg}，破甲 {stripped}");
+                }
+                break;
+
+            case CardType.Seal:
+                enemy.TakeDamage(totalDmg);
+                if (qteSuccess)
+                {
+                    var intent = enemy.GetComponent<EnemyIntentController>();
+                    if (intent == null)
+                        intent = enemy.GetComponentInParent<EnemyIntentController>();
+                    if (intent != null)
+                        intent.InterruptCharge();
+                    Debug.Log($"[CardManager] QTE 成功！【{card.cardName}】伤害 {totalDmg}，尝试打断蓄力");
+                }
+                else
+                {
+                    Debug.Log($"[CardManager] 【{card.cardName}】造成 {baseDmg} 点伤害");
+                }
+                break;
+        }
+    }
 }
