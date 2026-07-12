@@ -754,10 +754,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1754218196}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.35}
-  m_AnchorMax: {x: 0.5, y: 0.35}
+  m_AnchorMin: {x: 0.5, y: 0.45}
+  m_AnchorMax: {x: 0.5, y: 0.45}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 680, y: 180}
+  m_SizeDelta: {x: 960, y: 440}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &190844704
 MonoBehaviour:
@@ -777,9 +777,9 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 4
-  m_Spacing: 20
+  m_Spacing: 36
   m_ChildForceExpandWidth: 0
-  m_ChildForceExpandHeight: 1
+  m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 0
   m_ChildControlHeight: 0
   m_ChildScaleWidth: 0
@@ -5082,11 +5082,20 @@ MonoBehaviour:
   root: {fileID: 866306801}
   titleText: {fileID: 1143372433}
   buttonContainer: {fileID: 190844703}
+  cardPrefab: {fileID: 4279325574268886150, guid: 4c067238f6c8e81489b62a7fd68c205a, type: 3}
+  displayScale: 0.55
+  worldSpacing: 2.4
+  viewLocalCenter: {x: 0, y: 0.15, z: 7.5}
   cardBaseSprite: {fileID: 21300000, guid: e9eb02c92d6dc2d4aba646bc798fedcd, type: 3}
+  circleFrameSprite: {fileID: 21300000, guid: bf4b320b0d1c6fe4e93d3f957c24ad58, type: 3}
+  typeBannerSprite: {fileID: 21300000, guid: a9611a080d74c5741bed403d53c656e1, type: 3}
+  costBadgeSprite: {fileID: 21300000, guid: d21fc27ccb86d554eb504f0abebd4262, type: 3}
   choiceButtons: []
   choiceLabels: []
   choiceCardImages: []
   choiceNameLabels: []
+  cardSize: {x: 280, y: 400}
+  cardSpacing: 36
 --- !u!1 &877131016
 GameObject:
   m_ObjectHideFlags: 0
@@ -8998,7 +9007,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 720, y: 320}
+  m_SizeDelta: {x: 1100, y: 620}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1754218197
 MonoBehaviour:

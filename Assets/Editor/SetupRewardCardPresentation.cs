@@ -2,6 +2,10 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
+/// <summary>
+/// 奖励三选一改为直接使用手牌 Card 预制体。
+/// 菜单：AR封妖 / 配置奖励三选一卡牌界面
+/// </summary>
 public static class SetupRewardCardPresentation
 {
     [MenuItem("AR封妖/配置奖励三选一卡牌界面")]
@@ -14,15 +18,15 @@ public static class SetupRewardCardPresentation
             return;
         }
 
-        reward.cardBaseSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Prefabs/Cardpng/卡牌底.png");
-        if (reward.cardBaseSprite == null)
-        {
-            Debug.LogError("[RewardCards] 未找到卡牌底图。");
-            return;
-        }
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Card/Card.prefab");
+        reward.cardPrefab = prefab;
+        reward.displayScale = 0.55f;
+        reward.worldSpacing = 2.4f;
+        reward.viewLocalCenter = new Vector3(0f, 0.15f, 7.5f);
 
         EditorUtility.SetDirty(reward);
         EditorSceneManager.MarkSceneDirty(reward.gameObject.scene);
-        Debug.Log("[RewardCards] 已绑定正式卡牌底图；奖励将以三张完整卡牌显示。");
+        EditorSceneManager.SaveOpenScenes();
+        Debug.Log("[RewardCards] 已绑定手牌 Card 预制体。奖励界面将实例化真实卡牌，不再 UI 重拼。");
     }
 }
