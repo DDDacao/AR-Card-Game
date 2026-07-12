@@ -1,8 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// 敌人弱点：小而亮的光球（+ 粒子光晕），大范围碰撞便于瞄准。
-/// 支持瞄准高亮、跟随骨骼。
+/// 敌人弱点：只有一个小光球 + SphereCollider 判定。
+/// 不挂粒子，避免出现红色方块 billboard。
+/// 支持瞄准高亮；父级缩放变化时自动补偿视觉与碰撞半径。
 /// </summary>
 [RequireComponent(typeof(SphereCollider))]
 public class WeaknessPoint : MonoBehaviour
@@ -12,17 +13,15 @@ public class WeaknessPoint : MonoBehaviour
 
     [Header("显示")]
     public bool showMarker = true;
-    [Tooltip("光芯视觉大小（本地）")]
-    public float visualCoreScale = 0.11f;
-    [Tooltip("光晕粒子大小")]
-    public float glowParticleSize = 0.18f;
-    public Color markerColor = new Color(1f, 0.25f, 0.22f, 0.9f);
+    [Tooltip("光球在世界空间的大致直径（米）")]
+    public float visualCoreScale = 0.12f;
+    public Color markerColor = new Color(1f, 0.25f, 0.22f, 0.95f);
 
-    [Header("判定（比看起来大，好点中）")]
-    [Tooltip("SphereCollider 半径，世界空间随父级缩放")]
+    [Header("判定（比看起来大，好点中；世界空间半径）")]
+    [Tooltip("SphereCollider 世界空间半径")]
     public float hitRadius = 0.55f;
 
-    [Header("跟随（可选，挂到翅膀骨骼）")]
+    [Header("跟随（可选；若已挂在头骨下可不填）")]
     public Transform followTarget;
     public Vector3 followLocalOffset = Vector3.zero;
 
@@ -37,7 +36,6 @@ public class WeaknessPoint : MonoBehaviour
     private Transform coreTf;
     private Renderer coreRenderer;
     private Material coreMat;
-    private ParticleSystem glowPs;
     private SphereCollider hitCol;
     private float pulseT;
     private Color baseColor;
@@ -55,8 +53,8 @@ public class WeaknessPoint : MonoBehaviour
         if (hitCol == null)
             hitCol = gameObject.AddComponent<SphereCollider>();
         hitCol.isTrigger = false; // Raycast 需要
-        hitCol.radius = hitRadius;
         hitCol.center = Vector3.zero;
+        ApplyColliderRadius();
     }
 
     private void Start()
@@ -74,8 +72,7 @@ public class WeaknessPoint : MonoBehaviour
             EnsureVisual();
         if (visualRoot != null)
             visualRoot.SetActive(true);
-        if (hitCol != null)
-            hitCol.radius = hitRadius;
+        ApplyColliderRadius();
     }
 
     private void OnDisable()
@@ -88,18 +85,17 @@ public class WeaknessPoint : MonoBehaviour
         if (followTarget != null)
         {
             transform.position = followTarget.TransformPoint(followLocalOffset);
-            // 保持世界朝向稳定，避免骨骼旋转把球扭扁观感
             transform.rotation = Quaternion.identity;
         }
 
+        ApplyColliderRadius();
+
         if (visualRoot == null || !visualRoot.activeInHierarchy) return;
 
-        // 轻柔呼吸脉动
         pulseT += Time.deltaTime;
         float breathe = 1f + Mathf.Sin(pulseT * (IsAimed ? 7f : 3.2f)) * (IsAimed ? 0.12f : 0.05f);
         float aimBoost = IsAimed ? (IsTypeMatch ? 1.45f : 1.15f) : 1f;
-        if (coreTf != null)
-            coreTf.localScale = Vector3.one * visualCoreScale * breathe * aimBoost;
+        ApplyCoreWorldScale(visualCoreScale * breathe * aimBoost);
     }
 
     public CharacterStats GetOwner()
@@ -147,15 +143,15 @@ public class WeaknessPoint : MonoBehaviour
         switch (weaknessType)
         {
             case WeaknessType.RedAttack:
-                baseColor = new Color(1f, 0.22f, 0.18f, 0.92f);
-                aimColor = new Color(1f, 0.45f, 0.35f, 1f);
+                baseColor = new Color(1f, 0.22f, 0.18f, 0.95f);
+                aimColor = new Color(1f, 0.55f, 0.4f, 1f);
                 break;
             case WeaknessType.YellowArmor:
-                baseColor = new Color(1f, 0.82f, 0.2f, 0.92f);
-                aimColor = new Color(1f, 0.95f, 0.45f, 1f);
+                baseColor = new Color(1f, 0.82f, 0.2f, 0.95f);
+                aimColor = new Color(1f, 0.95f, 0.5f, 1f);
                 break;
             case WeaknessType.PurpleSeal:
-                baseColor = new Color(0.72f, 0.32f, 1f, 0.92f);
+                baseColor = new Color(0.72f, 0.32f, 1f, 0.95f);
                 aimColor = new Color(0.9f, 0.55f, 1f, 1f);
                 break;
             default:
@@ -176,54 +172,55 @@ public class WeaknessPoint : MonoBehaviour
         visualRoot.transform.localRotation = Quaternion.identity;
         visualRoot.transform.localScale = Vector3.one;
 
-        // —— 光芯：小半透明球 + 自发光 ——
+        // 仅一个小球：去掉粒子，避免出现红色方块 billboard
         var core = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         core.name = "Core";
         core.transform.SetParent(visualRoot.transform, false);
         core.transform.localPosition = Vector3.zero;
-        core.transform.localScale = Vector3.one * visualCoreScale;
         coreTf = core.transform;
+
+        // 去掉默认 MeshCollider，判定只用父物体 SphereCollider
         var coreCol = core.GetComponent<Collider>();
-        if (coreCol != null) Destroy(coreCol);
+        if (coreCol != null)
+            Destroy(coreCol);
 
         coreRenderer = core.GetComponent<Renderer>();
-        coreMat = CreateGlowMaterial(baseColor);
+        coreMat = CreateBallMaterial(baseColor);
         if (coreRenderer != null)
-            coreRenderer.sharedMaterial = coreMat;
-
-        // —— 粒子光晕 ——
-        var psGo = new GameObject("GlowParticles");
-        psGo.transform.SetParent(visualRoot.transform, false);
-        glowPs = psGo.AddComponent<ParticleSystem>();
-        ConfigureGlowParticles(glowPs, baseColor);
-
-        var psr = psGo.GetComponent<ParticleSystemRenderer>();
-        if (psr != null)
         {
-            var pmat = CreateParticleMaterial(baseColor);
-            psr.sharedMaterial = pmat;
-            psr.renderMode = ParticleSystemRenderMode.Billboard;
+            coreRenderer.sharedMaterial = coreMat;
+            coreRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            coreRenderer.receiveShadows = false;
         }
+
+        ApplyCoreWorldScale(visualCoreScale);
+    }
+
+    private void ApplyCoreWorldScale(float worldDiameter)
+    {
+        if (coreTf == null) return;
+        float lossy = Mathf.Max(0.0001f, transform.lossyScale.x);
+        float local = worldDiameter / lossy;
+        coreTf.localScale = Vector3.one * local;
+    }
+
+    private void ApplyColliderRadius()
+    {
+        if (hitCol == null) return;
+        float lossy = Mathf.Max(0.0001f, transform.lossyScale.x);
+        hitCol.radius = hitRadius / lossy;
+        hitCol.center = Vector3.zero;
     }
 
     private void ApplyVisualState(bool aimed, bool typeMatch)
     {
-        if (coreMat == null && visualRoot != null)
+        if (coreMat == null && showMarker)
             EnsureVisual();
         if (coreMat == null) return;
 
         Color c = aimed ? (typeMatch ? aimColor : Color.Lerp(baseColor, Color.white, 0.25f)) : baseColor;
-        float emit = aimed ? (typeMatch ? 3.2f : 1.6f) : 1.1f;
+        float emit = aimed ? (typeMatch ? 2.8f : 1.5f) : 1.0f;
         SetMaterialColor(coreMat, c, emit);
-
-        if (glowPs != null)
-        {
-            var main = glowPs.main;
-            main.startColor = new Color(c.r, c.g, c.b, aimed ? 0.55f : 0.28f);
-            var emission = glowPs.emission;
-            emission.rateOverTime = aimed ? (typeMatch ? 28f : 16f) : 10f;
-            if (!glowPs.isPlaying) glowPs.Play();
-        }
     }
 
     private static void SetMaterialColor(Material mat, Color c, float emissionMul)
@@ -243,110 +240,30 @@ public class WeaknessPoint : MonoBehaviour
         }
     }
 
-    private static Material CreateGlowMaterial(Color color)
+    /// <summary>
+    /// 用不带纹理的 Unlit 实心球材质，避免 URP Lit 透明/粒子方块伪影。
+    /// </summary>
+    private static Material CreateBallMaterial(Color color)
     {
-        Shader sh = Shader.Find("Universal Render Pipeline/Lit");
+        Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+        if (sh == null) sh = Shader.Find("Unlit/Color");
+        if (sh == null) sh = Shader.Find("Sprites/Default");
         if (sh == null) sh = Shader.Find("Standard");
-        if (sh == null) sh = Shader.Find("Sprites/Default");
+
         var mat = new Material(sh);
-        mat.name = "WeaknessGlowCore";
-
-        // 尽量半透明 + 自发光
-        if (mat.HasProperty("_Surface"))
-        {
-            mat.SetFloat("_Surface", 1f); // Transparent
-            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            mat.renderQueue = 3000;
-        }
-        if (mat.HasProperty("_Blend"))
-            mat.SetFloat("_Blend", 0f);
-        if (mat.HasProperty("_SrcBlend"))
-            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        if (mat.HasProperty("_DstBlend"))
-            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        if (mat.HasProperty("_ZWrite"))
-            mat.SetInt("_ZWrite", 0);
-        if (mat.HasProperty("_Cull"))
-            mat.SetInt("_Cull", 0);
-
-        SetMaterialColor(mat, color, 1.2f);
+        mat.name = "WeaknessBall";
+        SetMaterialColor(mat, color, 1.1f);
         return mat;
-    }
-
-    private static Material CreateParticleMaterial(Color color)
-    {
-        Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-        if (sh == null) sh = Shader.Find("Particles/Standard Unlit");
-        if (sh == null) sh = Shader.Find("Sprites/Default");
-        var mat = new Material(sh);
-        mat.name = "WeaknessGlowParticle";
-        if (mat.HasProperty("_BaseColor"))
-            mat.SetColor("_BaseColor", color);
-        if (mat.HasProperty("_Color"))
-            mat.SetColor("_Color", color);
-        mat.color = color;
-        // Additive-ish
-        if (mat.HasProperty("_Surface"))
-            mat.SetFloat("_Surface", 1f);
-        return mat;
-    }
-
-    private void ConfigureGlowParticles(ParticleSystem ps, Color color)
-    {
-        var main = ps.main;
-        main.loop = true;
-        main.playOnAwake = true;
-        main.startLifetime = 1.2f;
-        main.startSize = glowParticleSize;
-        main.startColor = new Color(color.r, color.g, color.b, 0.3f);
-        main.startSpeed = 0.02f;
-        main.maxParticles = 24;
-        main.simulationSpace = ParticleSystemSimulationSpace.Local;
-        main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-
-        var emission = ps.emission;
-        emission.rateOverTime = 10f;
-
-        var shape = ps.shape;
-        shape.enabled = true;
-        shape.shapeType = ParticleSystemShapeType.Sphere;
-        shape.radius = 0.02f;
-
-        var sizeOver = ps.sizeOverLifetime;
-        sizeOver.enabled = true;
-        sizeOver.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.6f, 1f, 1.4f));
-
-        var colOver = ps.colorOverLifetime;
-        colOver.enabled = true;
-        var grad = new Gradient();
-        grad.SetKeys(
-            new[]
-            {
-                new GradientColorKey(color, 0f),
-                new GradientColorKey(color, 1f)
-            },
-            new[]
-            {
-                new GradientAlphaKey(0f, 0f),
-                new GradientAlphaKey(0.45f, 0.25f),
-                new GradientAlphaKey(0f, 1f)
-            });
-        colOver.color = grad;
-
-        var noise = ps.noise;
-        noise.enabled = true;
-        noise.strength = 0.08f;
-        noise.frequency = 0.4f;
     }
 
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
         Color c = markerColor;
-        c.a = 0.2f;
+        c.a = 0.15f;
         Gizmos.color = c;
-        Gizmos.DrawWireSphere(transform.position, hitRadius * Mathf.Max(transform.lossyScale.x, 0.01f));
-        c.a = 0.7f;
+        Gizmos.DrawWireSphere(transform.position, hitRadius);
+        c.a = 0.75f;
         Gizmos.color = c;
         Gizmos.DrawSphere(transform.position, visualCoreScale * 0.5f);
     }
@@ -354,8 +271,12 @@ public class WeaknessPoint : MonoBehaviour
     private void OnValidate()
     {
         var col = GetComponent<SphereCollider>();
-        if (col != null)
-            col.radius = hitRadius;
+        if (col == null) return;
+        float lossy = 1f;
+        if (Application.isPlaying)
+            lossy = Mathf.Max(0.0001f, transform.lossyScale.x);
+        col.radius = hitRadius / lossy;
+        col.center = Vector3.zero;
     }
 #endif
 }

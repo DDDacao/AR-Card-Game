@@ -115,6 +115,13 @@ public static class RebuildChineseFonts
         Add(" ··…—–-_/\\()（）[]【】{}<>《》\"'“”‘’.,，。!！?？:：;；%％+±=×÷@#&*~`|");
         Add("QTEHP");
 
+        // 新版可调 HUD 意图 / 回合状态（与 TmpChineseFontUtil.HudWarmupCharset 同步）
+        Add(TmpChineseFontUtil.HudWarmupCharset);
+        Add("第回合玩家妖怪行动中等待开战战斗结束牌堆剩余手牌");
+        Add("攻击防御蓄力普通造成点伤害获得护甲弱点红色黄色紫色");
+        Add("斩妖符破煞符镇魂符瞄准对准拖出拖牌结束点击请稍候");
+        Add("小妖石灵山鬼本无暴露准备重击已被打断正在");
+
         // Game Data
         string dataRoot = Path.Combine(Application.dataPath, "Game Data");
         if (Directory.Exists(dataRoot))

@@ -180,6 +180,33 @@ public class EnemyIntentController : MonoBehaviour
 
     public void RefreshWeaknessList()
     {
-        weaknessPoints = new List<WeaknessPoint>(GetComponentsInChildren<WeaknessPoint>(true));
+        weaknessPoints = new List<WeaknessPoint>();
+
+        // 优先使用换模后的 ActiveMonster 上的弱点（Prefab 内）
+        Transform activeMonster = transform.Find("ActiveMonster");
+        if (activeMonster != null)
+        {
+            var onMonster = activeMonster.GetComponentsInChildren<WeaknessPoint>(true);
+            if (onMonster != null && onMonster.Length > 0)
+            {
+                weaknessPoints.AddRange(onMonster);
+                return;
+            }
+        }
+
+        // 回退：整棵子树（并跳过已禁用的场景旧弱点）
+        var all = GetComponentsInChildren<WeaknessPoint>(true);
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] == null) continue;
+            // 场景 Ellen 根下旧 Weakness_* 若被关掉仍会扫到，仅收集 activeSelf 或在 ActiveMonster 下的
+            if (!all[i].gameObject.activeInHierarchy && all[i].transform.root == transform.root)
+            {
+                // 允许 inactive 的弱点仍进列表（意图会 SetActive），但排除被永久废弃的场景直属节点
+                if (all[i].transform.parent == transform && all[i].name.StartsWith("Weakness_"))
+                    continue;
+            }
+            weaknessPoints.Add(all[i]);
+        }
     }
 }

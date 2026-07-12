@@ -16,7 +16,7 @@ MonoBehaviour:
   m_GUID: bd8917552c660b04687ac8821a62ff49
   m_SerializeEntries:
   - m_GUID: 0faf4abde39b479498344547f7a17390
-    m_Address: attack
+    m_Address: "\u65A9\u5996\u7B26"
     m_ReadOnly: 0
     m_SerializedLabels:
     - CardData

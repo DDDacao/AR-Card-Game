@@ -37,6 +37,9 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         cardData = data;
         if (data == null) return;
 
+        // Hierarchy / 调试：实例名 = 卡牌中文名
+        gameObject.name = string.IsNullOrEmpty(data.cardName) ? "Card" : $"Card_{data.cardName}";
+
         if (cardSprite != null)
             cardSprite.sprite = data.cardImage;
         if (costText != null)

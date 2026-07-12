@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 按关卡把弱点锚到怪物骨骼（先做第 1 关小妖翅膀）。
-/// 由 BattleFlowManager 换模后调用。
+/// 换模后：关闭场景旧弱点，启用怪物 Prefab 上的弱点，并统一挂到头部便于测试。
+/// 由 BattleFlowManager.SwapMonsterModel 调用。
 /// </summary>
 public static class WeaknessAnchorSetup
 {
@@ -13,79 +13,54 @@ public static class WeaknessAnchorSetup
     {
         if (enemyRoot == null) return;
 
-        var points = enemyRoot.GetComponentsInChildren<WeaknessPoint>(true);
-        if (points == null || points.Length == 0) return;
+        // 场景 Ellen 上的旧 Weakness_* 不再使用，避免重复判定/红色方块
+        DisableLegacySceneWeaknesses(enemyRoot);
 
-        // 默认：大判定、小视觉（所有关统一手感）
+        CharacterStats stats = enemyRoot.GetComponent<CharacterStats>();
+        Transform searchRoot = activeMonster != null ? activeMonster.transform : enemyRoot.transform;
+
+        WeaknessPoint[] points = searchRoot.GetComponentsInChildren<WeaknessPoint>(true);
+        if (points == null || points.Length == 0)
+        {
+            // Prefab 尚未配置时运行时兜底：在头部生成三色弱点
+            CreateHeadWeaknesses(searchRoot.gameObject, stats);
+            points = searchRoot.GetComponentsInChildren<WeaknessPoint>(true);
+        }
+
+        Transform head = FindHeadBone(searchRoot, stageIndex);
+
         for (int i = 0; i < points.Length; i++)
         {
-            var wp = points[i];
+            WeaknessPoint wp = points[i];
             if (wp == null) continue;
-            wp.hitRadius = 0.62f;
-            wp.visualCoreScale = 0.1f;
-            wp.glowParticleSize = 0.16f;
-            var col = wp.GetComponent<SphereCollider>();
-            if (col != null) col.radius = wp.hitRadius;
-        }
 
-        if (stageIndex == 0)
-            SetupXiaoYao(enemyRoot, activeMonster, points);
-        // 其它关卡后续再做
-    }
+            wp.owner = stats;
+            // 视觉更明显；判定仍偏大方便点中
+            wp.hitRadius = 0.65f;
+            wp.visualCoreScale = 0.28f;
+            wp.showMarker = true;
+            wp.followTarget = null; // 直接挂头骨，不需要 LateUpdate 跟随
 
-    private static void SetupXiaoYao(GameObject enemyRoot, GameObject activeMonster, WeaknessPoint[] points)
-    {
-        // 红弱点 → 右翅（第一回合攻击意图）
-        Transform wing = FindDeep(activeMonster != null ? activeMonster.transform : enemyRoot.transform,
-            "Vespomorph_WingRightA", "WingRightA", "SK_VespomorphWingRightA");
-
-        WeaknessPoint red = null;
-        WeaknessPoint yellow = null;
-        WeaknessPoint purple = null;
-        for (int i = 0; i < points.Length; i++)
-        {
-            if (points[i] == null) continue;
-            switch (points[i].weaknessType)
+            // 全部挂到头上，并沿头骨前/上推出，避免陷进模型
+            if (head != null)
             {
-                case WeaknessType.RedAttack: red = points[i]; break;
-                case WeaknessType.YellowArmor: yellow = points[i]; break;
-                case WeaknessType.PurpleSeal: purple = points[i]; break;
-            }
-        }
-
-        if (red != null)
-        {
-            // 跟随翅膀中段偏外，略向前方便射线点中
-            if (wing != null)
-            {
-                red.BindFollow(wing, new Vector3(-0.35f, 0.05f, 0.12f));
-                Debug.Log($"[WeaknessAnchor] 红弱点跟随翅膀: {wing.name}");
+                if (wp.transform.parent != head)
+                    wp.transform.SetParent(head, false);
+                PlaceOutsideHead(wp.transform, head, wp.weaknessType);
             }
             else
             {
-                // 回退：相对 Ellen 本地，翅膀大致高度
-                red.followTarget = null;
-                red.transform.SetParent(enemyRoot.transform, false);
-                red.transform.localPosition = new Vector3(0.55f, 1.05f, 0.25f);
-                Debug.LogWarning("[WeaknessAnchor] 未找到翅膀骨骼，红弱点用近似坐标。");
+                wp.transform.localPosition = LocalOffsetForType(wp.weaknessType);
+                wp.transform.localRotation = Quaternion.identity;
+                wp.transform.localScale = Vector3.one;
             }
-            red.hitRadius = 0.68f; // 第一关红弱点更好点
-            var col = red.GetComponent<SphereCollider>();
-            if (col != null) col.radius = red.hitRadius;
-        }
 
-        // 黄 / 紫：先摆在身体合理位置（暂不绑骨，后续关再精修）
-        if (yellow != null)
-        {
-            yellow.followTarget = null;
-            yellow.transform.SetParent(enemyRoot.transform, false);
-            yellow.transform.localPosition = new Vector3(0f, 0.75f, 0.35f);
-        }
-        if (purple != null)
-        {
-            purple.followTarget = null;
-            purple.transform.SetParent(enemyRoot.transform, false);
-            purple.transform.localPosition = new Vector3(-0.15f, 1.35f, 0.2f);
+            var col = wp.GetComponent<SphereCollider>();
+            if (col != null)
+            {
+                col.isTrigger = false;
+                col.center = Vector3.zero;
+            }
         }
 
         var intent = enemyRoot.GetComponent<EnemyIntentController>();
@@ -94,6 +69,140 @@ public static class WeaknessAnchorSetup
             intent.RefreshWeaknessList();
             intent.RefreshWeaknessVisibility();
         }
+
+        Debug.Log($"[WeaknessAnchor] stage={stageIndex} head={(head != null ? head.name : "null")} points={points.Length}");
+    }
+
+    private static void DisableLegacySceneWeaknesses(GameObject enemyRoot)
+    {
+        // 只关 Ellen 根下直接挂的旧弱点，不动 ActiveMonster 内的
+        for (int i = 0; i < enemyRoot.transform.childCount; i++)
+        {
+            Transform child = enemyRoot.transform.GetChild(i);
+            if (child == null) continue;
+            if (child.name == "ActiveMonster") continue;
+
+            var wps = child.GetComponents<WeaknessPoint>();
+            if (wps != null && wps.Length > 0)
+            {
+                child.gameObject.SetActive(false);
+                continue;
+            }
+
+            // 名字匹配兜底
+            if (child.name.StartsWith("Weakness_"))
+                child.gameObject.SetActive(false);
+        }
+    }
+
+    private static void CreateHeadWeaknesses(GameObject monsterRoot, CharacterStats owner)
+    {
+        CreateOne(monsterRoot, "Weakness_Red", WeaknessType.RedAttack, owner);
+        CreateOne(monsterRoot, "Weakness_Yellow", WeaknessType.YellowArmor, owner);
+        CreateOne(monsterRoot, "Weakness_Purple", WeaknessType.PurpleSeal, owner);
+    }
+
+    private static void CreateOne(GameObject parent, string name, WeaknessType type, CharacterStats owner)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+        go.transform.localPosition = LocalOffsetForType(type);
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+
+        var sc = go.AddComponent<SphereCollider>();
+        sc.radius = 0.55f;
+        sc.isTrigger = false;
+
+        var wp = go.AddComponent<WeaknessPoint>();
+        wp.weaknessType = type;
+        wp.visualCoreScale = 0.28f;
+        wp.hitRadius = 0.65f;
+        wp.owner = owner;
+        wp.showMarker = true;
+    }
+
+    /// <summary>
+    /// 把头前/上方向推出弱点，避免陷在网格里。三色微偏便于 Prefab 辨认。
+    /// </summary>
+    private static void PlaceOutsideHead(Transform wp, Transform head, WeaknessType type)
+    {
+        // 侧向微偏（头骨局部 X）
+        float side = type switch
+        {
+            WeaknessType.YellowArmor => 0.12f,
+            WeaknessType.PurpleSeal => -0.12f,
+            _ => 0f
+        };
+
+        // 世界空间：上 + 朝玩家大致前方（用 head.forward；若怪异再用 up 叉乘兜底）
+        Vector3 up = Vector3.up;
+        Vector3 forward = head.forward;
+        if (Mathf.Abs(Vector3.Dot(forward, up)) > 0.85f)
+            forward = head.right; // 头骨 forward 几乎朝上时换轴
+        forward = Vector3.ProjectOnPlane(forward, up).normalized;
+        if (forward.sqrMagnitude < 0.01f)
+            forward = Vector3.forward;
+
+        Vector3 world = head.position
+                        + up * 0.32f
+                        + forward * 0.42f
+                        + head.right * side;
+
+        wp.SetParent(head, true);
+        wp.position = world;
+        wp.rotation = Quaternion.identity;
+        wp.localScale = Vector3.one;
+    }
+
+    private static Vector3 LocalOffsetForType(WeaknessType type)
+    {
+        // 无头骨时的回退（相对怪物根）
+        switch (type)
+        {
+            case WeaknessType.RedAttack:
+                return new Vector3(0f, 1.4f, 0.45f);
+            case WeaknessType.YellowArmor:
+                return new Vector3(0.15f, 1.35f, 0.45f);
+            case WeaknessType.PurpleSeal:
+                return new Vector3(-0.15f, 1.35f, 0.45f);
+            default:
+                return new Vector3(0f, 1.4f, 0.45f);
+        }
+    }
+
+    private static Transform FindHeadBone(Transform root, int stageIndex)
+    {
+        if (root == null) return null;
+
+        string[] names = stageIndex switch
+        {
+            0 => new[] { "Vespomorph_Head", "Head", "head" },
+            1 => new[] { "CAVECRAWLER_HEAD", "Head", "head" },
+            // FBX 骨骼名是 "Drackmahre_ Head"（下划线后有空格）
+            2 => new[] { "Drackmahre_ Head", "Drackmahre_Head", "Head", "head" },
+            _ => new[] { "Head", "head" }
+        };
+
+        Transform found = FindDeep(root, names);
+        if (found != null) return found;
+
+        // 通用兜底：名字包含 Head（兼容 "Drackmahre_ Head" 等带空格骨骼）
+        Transform loose = FindNameContains(root, "Head");
+        if (loose != null) return loose;
+        return FindDeep(root, "Head", "head", "HEAD", "Skull", "skull");
+    }
+
+    private static Transform FindNameContains(Transform root, string token)
+    {
+        if (root == null || string.IsNullOrEmpty(token)) return null;
+        var all = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] != null && all[i].name.IndexOf(token, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return all[i];
+        }
+        return null;
     }
 
     private static Transform FindDeep(Transform root, params string[] names)

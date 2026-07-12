@@ -223,26 +223,15 @@ public static class SetupWeaknessAndQTE
             return false;
         }
 
-        var olds = enemy.GetComponentsInChildren<WeaknessPoint>(true);
-        for (int i = 0; i < olds.Length; i++)
-            Object.DestroyImmediate(olds[i].gameObject);
-
-        var wpGo = new GameObject("Weakness_Red");
-        wpGo.transform.SetParent(enemy.transform, false);
-        wpGo.transform.localPosition = new Vector3(0f, 1.2f, 0.35f);
-        wpGo.transform.localRotation = Quaternion.identity;
-        wpGo.transform.localScale = Vector3.one;
-
-        var sphere = wpGo.AddComponent<SphereCollider>();
-        sphere.radius = 0.45f;
-        sphere.isTrigger = false;
-
-        var wp = wpGo.AddComponent<WeaknessPoint>();
-        wp.weaknessType = WeaknessType.RedAttack;
-        wp.visualCoreScale = 0.1f;
-        wp.hitRadius = 0.62f;
-        wp.owner = enemy.GetComponent<CharacterStats>();
-        wp.showMarker = true;
+        // 弱点已迁移到怪物 Prefab 头部；此处只清 Ellen 上旧弱点，不再在场景宿主上新建
+        for (int i = enemy.transform.childCount - 1; i >= 0; i--)
+        {
+            var child = enemy.transform.GetChild(i);
+            if (child == null || child.name == "ActiveMonster") continue;
+            if (child.name.StartsWith("Weakness_") || child.GetComponent<WeaknessPoint>() != null)
+                Object.DestroyImmediate(child.gameObject);
+        }
+        SetupMonsterPrefabWeaknesses.SetupAll(showDialog: false);
 
         if (enemy.GetComponent<Collider>() == null && enemy.GetComponentInChildren<Collider>() == null)
         {

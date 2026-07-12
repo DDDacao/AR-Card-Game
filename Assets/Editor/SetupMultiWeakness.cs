@@ -84,14 +84,17 @@ public static class SetupMultiWeakness
             return;
         }
 
-        // 清旧弱点
-        var olds = enemy.GetComponentsInChildren<WeaknessPoint>(true);
-        for (int i = 0; i < olds.Length; i++)
-            Object.DestroyImmediate(olds[i].gameObject);
+        // 弱点改挂在怪物 Prefab 头部（见 SetupMonsterPrefabWeaknesses），不再在 Ellen 上创建
+        for (int i = enemy.transform.childCount - 1; i >= 0; i--)
+        {
+            var child = enemy.transform.GetChild(i);
+            if (child == null) continue;
+            if (child.name == "ActiveMonster") continue;
+            if (child.name.StartsWith("Weakness_") || child.GetComponent<WeaknessPoint>() != null)
+                Object.DestroyImmediate(child.gameObject);
+        }
 
-        CreateWeakness(enemy, "Weakness_Red", WeaknessType.RedAttack, new Vector3(0f, 1.2f, 0.35f), 0.42f);
-        CreateWeakness(enemy, "Weakness_Yellow", WeaknessType.YellowArmor, new Vector3(0.35f, 0.95f, 0.3f), 0.42f);
-        CreateWeakness(enemy, "Weakness_Purple", WeaknessType.PurpleSeal, new Vector3(-0.3f, 1.35f, 0.3f), 0.42f);
+        SetupMonsterPrefabWeaknesses.SetupAll(showDialog: false);
 
         var intent = enemy.GetComponent<EnemyIntentController>();
         if (intent == null) intent = enemy.AddComponent<EnemyIntentController>();

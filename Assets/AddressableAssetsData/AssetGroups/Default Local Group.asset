@@ -14,7 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Default Local Group
   m_GUID: 5f22b725ee88b194198999a305dff47f
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 9a4e17bf8a5780e45ae6917ba1d01e41
+    m_Address: Assets/Game Data/Card Data/fire.asset
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 2a371dbcdca105744b93cc280e91d793, type: 2}
   m_SchemaSet:

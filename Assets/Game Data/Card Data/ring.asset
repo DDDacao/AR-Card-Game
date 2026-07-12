@@ -12,10 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96d08d58756fd4c41a476c41fbe78d35, type: 3}
   m_Name: ring
   m_EditorClassIdentifier: Assembly-CSharp::CardDataSO
-  cardName: "\u6D4B\u8BD5"
+  cardName: "\u6D4B\u8BD5\u724C_\u52FF\u7528"
   cardImage: {fileID: 21300000, guid: e631a72aa46384c678b310bb0b2f3483, type: 3}
   cost: 1
   cardType: 2
   description: "\u5F97\u5230\u6212\u6307"
   effectValue: 0
   effectValue2: 0
+  specialEffect: 0
+  specialEffectValue: 0
+  weaknessTag: 0
