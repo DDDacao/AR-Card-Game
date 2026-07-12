@@ -51,8 +51,12 @@ public static class BuildAdjustableBattleHudSkin
 
         RectTransform boss = CreateRect("BossHealth_可调", root, new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(0, -74), new Vector2(1160, 286));
         CreateRaw("Frame_底层", boss, bossFrame, Uv(80, 473, 1616, 400), Vector2.zero, boss.sizeDelta);
+        // 血条填充：Mask 按血量改宽；Fill 拉伸填满 Mask，整条胶囊缩放保留圆角（勿固定宽 + 硬裁切）
         controller.bossFillMask = CreateMask("FillMask_生命裁切", boss, new Vector2(0, .5f), new Vector2(0, .5f), Vector2.zero, new Vector2(1160, 286), new Vector2(0, .5f));
-        CreateRaw("Fill_上层", controller.bossFillMask, bossFill, Uv(188, 577, 1444, 200), Vector2.zero, new Vector2(1160, 286));
+        controller.bossFullWidth = 1160f;
+        var bossFillRaw = CreateRaw("Fill_上层", controller.bossFillMask, bossFill, Uv(188, 577, 1444, 200),
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(.5f, .5f));
+        controller.bossFillImage = bossFillRaw;
 
         controller.weaknessImage = CreateRaw("WeaknessIcon_Adjustable", root, weakRed, Uv(250, 500, 1250, 1250), new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(-92, -265), new Vector2(104, 104), new Vector2(.5f, .5f));
         controller.burnImage = CreateRaw("BurnIcon_Adjustable", root, burn, Uv(500, 500, 760, 1260), new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(42, -265), new Vector2(84, 104), new Vector2(.5f, .5f));

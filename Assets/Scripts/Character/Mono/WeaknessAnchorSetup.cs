@@ -35,13 +35,28 @@ public static class WeaknessAnchorSetup
             if (wp == null) continue;
 
             wp.owner = stats;
-            // 视觉更明显；判定仍偏大方便点中
-            wp.hitRadius = 0.65f;
-            wp.visualCoreScale = 0.28f;
             wp.showMarker = true;
-            wp.followTarget = null; // 直接挂头骨，不需要 LateUpdate 跟随
 
-            // 全部挂到头上，并沿头骨前/上推出，避免陷进模型
+            var col = wp.GetComponent<SphereCollider>();
+            if (col != null)
+            {
+                col.isTrigger = false;
+                col.center = Vector3.zero;
+            }
+
+            // 手调模式：完全保留 Prefab/场景里的父节点与 localPosition / 尺寸
+            if (wp.keepManualPlacement)
+            {
+                // 仍清掉 follow，避免 LateUpdate 再拽走手摆位置
+                wp.followTarget = null;
+                continue;
+            }
+
+            // 自动模式：重挂头骨并推到外侧
+            wp.hitRadius = 0.65f;
+            wp.visualCoreScale = 0.42f;
+            wp.followTarget = null;
+
             if (head != null)
             {
                 if (wp.transform.parent != head)
@@ -53,13 +68,6 @@ public static class WeaknessAnchorSetup
                 wp.transform.localPosition = LocalOffsetForType(wp.weaknessType);
                 wp.transform.localRotation = Quaternion.identity;
                 wp.transform.localScale = Vector3.one;
-            }
-
-            var col = wp.GetComponent<SphereCollider>();
-            if (col != null)
-            {
-                col.isTrigger = false;
-                col.center = Vector3.zero;
             }
         }
 
@@ -116,10 +124,12 @@ public static class WeaknessAnchorSetup
 
         var wp = go.AddComponent<WeaknessPoint>();
         wp.weaknessType = type;
-        wp.visualCoreScale = 0.28f;
+        wp.visualCoreScale = 0.42f;
         wp.hitRadius = 0.65f;
         wp.owner = owner;
         wp.showMarker = true;
+        // 运行时临时生成的点先自动摆位；你可在 Prefab 里改好后勾 keepManualPlacement
+        wp.keepManualPlacement = false;
     }
 
     /// <summary>

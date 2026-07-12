@@ -81,7 +81,8 @@ public class BattleFlowManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 控制怪物模型可见性，包括其下所有 Renderer、Collider 和 Canvas
+    /// 控制怪物模型可见性，包括其下所有 Renderer、Collider 和 Canvas。
+    /// 会跳过弱点节点（WeaknessPoint）——弱点显隐由 EnemyIntentController 按回合表管理。
     /// </summary>
     private void SetMonsterModelVisibility(GameObject monsterGo, bool visible)
     {
@@ -92,12 +93,16 @@ public class BattleFlowManager : MonoBehaviour
         var renderers = monsterGo.GetComponentsInChildren<Renderer>(true);
         foreach (var r in renderers)
         {
+            if (r == null) continue;
+            if (r.GetComponentInParent<WeaknessPoint>() != null) continue;
             r.enabled = visible;
         }
 
         var colliders = monsterGo.GetComponentsInChildren<Collider>(true);
         foreach (var c in colliders)
         {
+            if (c == null) continue;
+            if (c.GetComponentInParent<WeaknessPoint>() != null) continue;
             c.enabled = visible;
         }
 
@@ -105,6 +110,18 @@ public class BattleFlowManager : MonoBehaviour
         foreach (var canvas in canvases)
         {
             canvas.enabled = visible;
+        }
+
+        // AR 恢复显示后，按当前意图重新同步弱点（避免三色常亮 / 红弱点不退）
+        if (visible)
+        {
+            var intent = monsterGo.GetComponent<EnemyIntentController>();
+            if (intent == null)
+                intent = monsterGo.GetComponentInParent<EnemyIntentController>();
+            if (intent == null && turnManager != null)
+                intent = turnManager.enemyIntent;
+            if (intent != null)
+                intent.RefreshWeaknessVisibility();
         }
     }
 
@@ -246,14 +263,18 @@ public class BattleFlowManager : MonoBehaviour
             cardDeck.ClearAllForBattleReset();
         }
 
-        // 5. 敌人意图初始化
+        // 5. 敌人意图初始化（深拷贝策划案回合表，并立刻按第 1 步刷新弱点）
         if (turnManager.enemyIntent != null)
         {
             if (CurrentStage.intentLoop != null && CurrentStage.intentLoop.Count > 0)
             {
-                turnManager.enemyIntent.intentLoop = new List<EnemyIntentController.IntentStep>(CurrentStage.intentLoop);
+                turnManager.enemyIntent.SetIntentLoop(CurrentStage.intentLoop, resetToFirst: true);
             }
-            turnManager.enemyIntent.RefreshWeaknessList();
+            else
+            {
+                turnManager.enemyIntent.RefreshWeaknessList();
+                turnManager.enemyIntent.ResetIntent();
+            }
         }
 
         Debug.Log($"[BattleFlow] 成功开启战斗！关卡 {index + 1}/{campaign.stages.Count}：{CurrentStage.stageName}");
@@ -419,7 +440,9 @@ public class BattleFlowManager : MonoBehaviour
             // 回到扫卡等待状态，提示扫描下一张卡
             if (resultUI != null)
             {
-                resultUI.ShowMessage($"封印成功！\n请扫描第 {currentUnlockedStageIndex + 1} 关卡牌继续挑战", false, "", null);
+                resultUI.ShowVictory(
+                    $"请扫描第 {currentUnlockedStageIndex + 1} 关卡牌继续挑战",
+                    false, "", null);
             }
             return;
         }
@@ -429,7 +452,7 @@ public class BattleFlowManager : MonoBehaviour
         currentUnlockedStageIndex = 0;
         if (resultUI != null)
         {
-            resultUI.ShowMessage("三关尽破，封妖成功！", true, "再来一局", () =>
+            resultUI.ShowVictory("三关尽破，封妖成功！", true, "再来一局", () =>
             {
                 resultUI.HidePanel();
                 StartCampaign();

@@ -16,16 +16,36 @@ public sealed class BattleHudInfoPresenter : MonoBehaviour
 
     [Header("可选")]
     public TextMeshProUGUI deckCountText;
+    [Tooltip("攻击状态墨迹底层（与结束回合按钮同系）；为空时自动加载 Resources/BattleHudSkin/intent_badge")]
     public Image intentBadgeBackground;
+    public Sprite intentBadgeSprite;
+
+    [Header("意图布局（手调优先）")]
+    [Tooltip("关闭后：完全尊重场景里 RectTransform 手调，运行时只改文案/字体/贴图引用，不改 size/位置。\n开启后：按文案长度自动改文字框与墨迹尺寸（会覆盖你在 Hierarchy 的微调）。")]
+    public bool autoFitIntentLayout = false;
+    [Tooltip("相对文字框向外扩展（仅 autoFitIntentLayout=true 时生效）")]
+    public Vector2 intentBadgePadMin = new Vector2(-48f, -18f);
+    public Vector2 intentBadgePadMax = new Vector2(56f, 18f);
+    [Tooltip("文字框相对 preferred 的内边距（仅 autoFit 时）")]
+    public float intentTextPadX = 80f;
+    public float intentTextPadY = 22f;
+    public float intentMinWidth = 260f;
+    public float intentMinHeight = 64f;
+    public float intentMaxWidth = 720f;
+    public float intentMaxHeight = 100f;
+    [Tooltip("底图是否保持贴图宽高比（细长墨迹建议 false）")]
+    public bool intentBadgePreserveAspect = false;
 
     [Header("样式")]
-    [Tooltip("仅在父节点有非均匀缩放时，把意图/名称挪到 HUD 根下，避免被血条缩放压扁。不会每帧改你手调的 size/位置。")]
+    [Tooltip("仅在父节点有非均匀缩放时，把意图/名称挪到 HUD 根下，避免被血条缩放压扁。")]
     public bool detachTextFromScaledParents = true;
     public Color colorIdle = new Color(0.96f, 0.94f, 0.90f, 1f);
     public Color colorPlayerTurn = new Color(0.98f, 0.90f, 0.55f, 1f);
     public Color colorEnemyTurn = new Color(1f, 0.62f, 0.48f, 1f);
-    public Color colorIntent = new Color(1f, 0.92f, 0.75f, 1f);
+    public Color colorIntent = new Color(1f, 0.94f, 0.82f, 1f);
     public Color colorMuted = new Color(0.88f, 0.86f, 0.80f, 0.96f);
+    [Tooltip("墨迹底图着色（白=原色；可略偏金/红）")]
+    public Color intentBadgeTint = Color.white;
 
     private TurnManager turnManager;
     private CardDeck cardDeck;
@@ -36,8 +56,6 @@ public sealed class BattleHudInfoPresenter : MonoBehaviour
     private string lastIntentKey;
     private string lastTurnKey;
     private string lastHintKey;
-
-    private static readonly Color IntentBadgeBg = new Color(0.08f, 0.07f, 0.14f, 0.75f);
 
     private void Awake()
     {
@@ -104,9 +122,10 @@ public sealed class BattleHudInfoPresenter : MonoBehaviour
 
             var rt = enemyIntentText.rectTransform;
             NormalizeUniformScale(rt);
+            // 只保证墨迹在文字下层 + 贴图引用；默认不改你手调的 Rect
             EnsureIntentBadgeBackground();
-            // 背景跟着文字走，首次按当前文案收紧
-            FitIntentBoxToText();
+            if (autoFitIntentLayout)
+                FitIntentBoxToText();
         }
 
         if (bossNameText != null)
@@ -197,9 +216,20 @@ public sealed class BattleHudInfoPresenter : MonoBehaviour
     {
         if (enemyIntentText == null) return;
 
+        if (intentBadgeSprite == null)
+            intentBadgeSprite = Resources.Load<Sprite>("BattleHudSkin/intent_badge");
+
+        var textRt = enemyIntentText.rectTransform;
+        Transform parent = textRt.parent;
+
+        // 旧版把 Badge 挂在文字节点下：子 UI 后绘制会盖住父节点 TMP。必须改成「同级兄弟」。
         if (intentBadgeBackground == null)
         {
-            Transform existing = enemyIntentText.transform.Find("IntentBadgeBg");
+            Transform existing = null;
+            if (parent != null)
+                existing = parent.Find("IntentBadgeBg");
+            if (existing == null)
+                existing = textRt.Find("IntentBadgeBg");
             if (existing != null)
                 intentBadgeBackground = existing.GetComponent<Image>();
         }
@@ -208,46 +238,96 @@ public sealed class BattleHudInfoPresenter : MonoBehaviour
         {
             var go = new GameObject("IntentBadgeBg", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             go.layer = enemyIntentText.gameObject.layer;
-            go.transform.SetParent(enemyIntentText.transform, false);
-            go.transform.SetAsFirstSibling();
-
-            var img = go.GetComponent<Image>();
-            img.color = IntentBadgeBg;
-            img.raycastTarget = false;
-            intentBadgeBackground = img;
+            go.transform.SetParent(parent != null ? parent : textRt, false);
+            intentBadgeBackground = go.GetComponent<Image>();
+            // 新建时才给一个合理默认尺寸；之后手调不被覆盖
+            if (autoFitIntentLayout)
+                SyncIntentBadgeToText();
         }
 
-        // 背景贴满文字 Rect（文字框本身会按 preferred 收紧），只留很小边距
+        // 若仍挂在文字下面，提到与文字同级（只改父节点，不改你手调的 size/pos）
         var bgRt = intentBadgeBackground.rectTransform;
-        bgRt.anchorMin = Vector2.zero;
-        bgRt.anchorMax = Vector2.one;
-        bgRt.offsetMin = new Vector2(-14f, -6f);
-        bgRt.offsetMax = new Vector2(14f, 6f);
-        bgRt.localScale = Vector3.one;
+        if (bgRt.parent == textRt && parent != null)
+            bgRt.SetParent(parent, true); // worldPositionStays，尽量保留你摆好的位置
+
+        // 贴图 / 着色：只在引用为空或需要刷新贴图时写入，不改 Rect
+        if (intentBadgeSprite != null && intentBadgeBackground.sprite != intentBadgeSprite)
+            intentBadgeBackground.sprite = intentBadgeSprite;
+        intentBadgeBackground.type = Image.Type.Simple;
+        intentBadgeBackground.preserveAspect = intentBadgePreserveAspect;
+        intentBadgeBackground.color = intentBadgeTint;
+        intentBadgeBackground.raycastTarget = false;
+
+        // 绘制顺序：墨迹在下，文字在上（只调 sibling，不改尺寸）
+        if (bgRt.parent == textRt.parent && textRt.parent != null)
+        {
+            if (textRt.GetSiblingIndex() <= bgRt.GetSiblingIndex())
+                textRt.SetSiblingIndex(bgRt.GetSiblingIndex() + 1);
+        }
+
+        if (autoFitIntentLayout)
+            SyncIntentBadgeToText();
     }
 
     /// <summary>
-    /// 把意图文字框收成「刚好包住文字」的大小，背景随之变窄。
+    /// 仅 autoFitIntentLayout 时使用：墨迹对齐文字并按边距扩尺寸。
+    /// </summary>
+    private void SyncIntentBadgeToText()
+    {
+        if (!autoFitIntentLayout) return;
+        if (intentBadgeBackground == null || enemyIntentText == null) return;
+
+        var textRt = enemyIntentText.rectTransform;
+        var bgRt = intentBadgeBackground.rectTransform;
+
+        bgRt.localScale = Vector3.one;
+        bgRt.anchorMin = textRt.anchorMin;
+        bgRt.anchorMax = textRt.anchorMax;
+        bgRt.pivot = textRt.pivot;
+
+        float padL = Mathf.Abs(intentBadgePadMin.x);
+        float padB = Mathf.Abs(intentBadgePadMin.y);
+        float padR = Mathf.Abs(intentBadgePadMax.x);
+        float padT = Mathf.Abs(intentBadgePadMax.y);
+
+        bgRt.sizeDelta = textRt.sizeDelta + new Vector2(padL + padR, padB + padT);
+        float dx = (padR - padL) * 0.5f;
+        float dy = (padT - padB) * 0.5f;
+        bgRt.anchoredPosition = textRt.anchoredPosition + new Vector2(dx, dy);
+
+        intentBadgeBackground.color = intentBadgeTint;
+    }
+
+    /// <summary>
+    /// 仅 autoFitIntentLayout 时使用：按文案 preferred 改文字框宽高。
     /// </summary>
     private void FitIntentBoxToText()
     {
+        if (!autoFitIntentLayout) return;
         if (enemyIntentText == null) return;
 
         enemyIntentText.ForceMeshUpdate(true);
-        float padX = 28f; // 左右内边距
-        float padY = 14f; // 上下内边距
-        float w = enemyIntentText.preferredWidth + padX;
-        float h = enemyIntentText.preferredHeight + padY;
+        float w = enemyIntentText.preferredWidth + intentTextPadX;
+        float h = enemyIntentText.preferredHeight + intentTextPadY;
 
-        // 空文本时给个最小占位，避免闪成 0
-        if (w < 80f) w = 80f;
-        if (h < 36f) h = 36f;
-        w = Mathf.Min(w, 700f);
-        h = Mathf.Min(h, 90f);
+        if (w < intentMinWidth) w = intentMinWidth;
+        if (h < intentMinHeight) h = intentMinHeight;
+        w = Mathf.Min(w, intentMaxWidth);
+        h = Mathf.Min(h, intentMaxHeight);
 
         var rt = enemyIntentText.rectTransform;
-        // 保持中心点，只改宽高
         rt.sizeDelta = new Vector2(w, h);
+
+        SyncIntentBadgeToText();
+
+        if (intentBadgeBackground != null
+            && intentBadgeBackground.transform.parent == rt.parent
+            && rt.parent != null)
+        {
+            var bgRt = intentBadgeBackground.rectTransform;
+            if (rt.GetSiblingIndex() <= bgRt.GetSiblingIndex())
+                rt.SetSiblingIndex(bgRt.GetSiblingIndex() + 1);
+        }
     }
 
     private void BindTurnEvents()
@@ -355,9 +435,7 @@ public sealed class BattleHudInfoPresenter : MonoBehaviour
         if (!force && value == lastIntentKey) return;
         lastIntentKey = value;
 
-        if (intentBadgeBackground != null)
-            intentBadgeBackground.color = IntentBadgeBg;
-
+        EnsureIntentBadgeBackground();
         SetText(enemyIntentText, value, colorIntent);
         FitIntentBoxToText();
     }
@@ -436,14 +514,23 @@ public sealed class BattleHudInfoPresenter : MonoBehaviour
         }
         else
         {
-            WeaknessType w = intent != null ? intent.CurrentWeakness : WeaknessType.None;
-            string tip = WeaknessCardTip(w);
-            if (!string.IsNullOrEmpty(tip))
-                value = tip + "\n\u62d6\u724c\u5bf9\u51c6\u5f31\u70b9\u53efQTE\n\u70b9\u51fb\u7ed3\u675f\u56de\u5408";
-            // 拖牌对准弱点可QTE / 点击结束回合
+            // 本回合弱点已击破：提示不可再打
+            if (intent != null && intent.WeaknessExpendedThisTurn && intent.PlannedWeakness != WeaknessType.None)
+            {
+                value = "\u672c\u56de\u5408\u5f31\u70b9\u5df2\u51fb\u7834\n\u53ef\u7ee7\u7eed\u51fa\u724c\u6216\u7ed3\u675f\u56de\u5408";
+                // 本回合弱点已击破 / 可继续出牌或结束回合
+            }
             else
-                value = "\u62d6\u51fa\u7b26\u5492\u653b\u51fb\u6216\u9632\u5fa1\n\u70b9\u51fb\u7ed3\u675f\u56de\u5408";
-            // 拖出符咒攻击或防御 / 点击结束回合
+            {
+                WeaknessType w = intent != null ? intent.CurrentWeakness : WeaknessType.None;
+                string tip = WeaknessCardTip(w);
+                if (!string.IsNullOrEmpty(tip))
+                    value = tip + "\n\u62d6\u724c\u5bf9\u51c6\u5f31\u70b9\u53efQTE\n\u70b9\u51fb\u7ed3\u675f\u56de\u5408";
+                // 拖牌对准弱点可QTE / 点击结束回合
+                else
+                    value = "\u62d6\u51fa\u7b26\u5492\u653b\u51fb\u6216\u9632\u5fa1\n\u70b9\u51fb\u7ed3\u675f\u56de\u5408";
+                // 拖出符咒攻击或防御 / 点击结束回合
+            }
         }
 
         if (!force && value == lastHintKey) return;

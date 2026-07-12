@@ -4,15 +4,17 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 可在场景中直接调整的战斗 HUD 数值控制器。
-/// 布局、美术层、裁切范围均由 HUD_ArtSkin_Adjustable 子物体保存，
-/// 此组件只更新数值和当前状态图标，不会动态创建或销毁 UI。
+/// 布局、美术层均由 HUD_ArtSkin_Adjustable 子物体保存。
+/// Boss 血条：按比例缩放填充层（保留胶囊圆角），禁止用矩形 Mask 硬裁切出方角。
 /// </summary>
 public sealed class BattleHudAdjustableController : MonoBehaviour
 {
     [Header("Boss 血条")]
-    [Tooltip("可直接调整该 RectTransform 的宽度；控制器按生命百分比裁切。")]
+    [Tooltip("FillMask_生命裁切：宽度按血量变化；内部 Fill 拉伸填满，整段椭圆被压缩而非切方。")]
     public RectTransform bossFillMask;
     public float bossFullWidth = 1160f;
+    [Tooltip("可空：自动找 Mask 下的 RawImage 填充层")]
+    public RawImage bossFillImage;
 
     [Header("玩家生命（从下向上）")]
     public RectTransform playerFillMask;
@@ -24,6 +26,8 @@ public sealed class BattleHudAdjustableController : MonoBehaviour
     public TextMeshProUGUI armorText;
 
     [Header("敌方状态")]
+    [Tooltip("血条下的弱点图标。世界弱点特效已足够时建议关闭。")]
+    public bool showHudWeaknessIcon = false;
     public RawImage weaknessImage;
     public RawImage burnImage;
     public TextMeshProUGUI burnCountText;
@@ -36,6 +40,8 @@ public sealed class BattleHudAdjustableController : MonoBehaviour
     private CharacterStats enemy;
     private EnemyIntentController intent;
     private float nextRefresh;
+    private bool bossFillLayoutReady;
+    private float bossFillHeight = 286f;
 
     private void Update()
     {
@@ -66,7 +72,7 @@ public sealed class BattleHudAdjustableController : MonoBehaviour
         if (enemy != null && bossFillMask != null)
         {
             float ratio = enemy.MaxHP > 0 ? Mathf.Clamp01((float)enemy.CurrentHP / enemy.MaxHP) : 0f;
-            bossFillMask.sizeDelta = new Vector2(bossFullWidth * ratio, bossFillMask.sizeDelta.y);
+            ApplyBossHpFill(ratio);
         }
 
         if (player != null)
@@ -83,13 +89,22 @@ public sealed class BattleHudAdjustableController : MonoBehaviour
 
         if (weaknessImage != null)
         {
-            bool show = intent != null && intent.CurrentWeakness != WeaknessType.None;
-            weaknessImage.gameObject.SetActive(show);
-            if (show)
+            // 世界空间已有弱点特效时，默认不显示血条旁 HUD 弱点图标
+            if (!showHudWeaknessIcon)
             {
-                weaknessImage.texture = intent.CurrentWeakness == WeaknessType.YellowArmor ? weaknessYellow
-                    : intent.CurrentWeakness == WeaknessType.PurpleSeal ? weaknessPurple
-                    : weaknessRed;
+                if (weaknessImage.gameObject.activeSelf)
+                    weaknessImage.gameObject.SetActive(false);
+            }
+            else
+            {
+                bool show = intent != null && intent.CurrentWeakness != WeaknessType.None;
+                weaknessImage.gameObject.SetActive(show);
+                if (show)
+                {
+                    weaknessImage.texture = intent.CurrentWeakness == WeaknessType.YellowArmor ? weaknessYellow
+                        : intent.CurrentWeakness == WeaknessType.PurpleSeal ? weaknessPurple
+                        : weaknessRed;
+                }
             }
         }
 
@@ -100,6 +115,59 @@ public sealed class BattleHudAdjustableController : MonoBehaviour
         {
             burnCountText.gameObject.SetActive(showBurn);
             if (showBurn) burnCountText.text = $"x{burn}";
+        }
+    }
+
+    /// <summary>
+    /// Mask 宽度 = full * ratio，Fill 拉伸填满 Mask。
+    /// 整条胶囊贴图被横向压缩，两端始终保持圆角，而不是被竖线切成方块。
+    /// </summary>
+    private void ApplyBossHpFill(float ratio)
+    {
+        EnsureBossFillLayout();
+
+        ratio = Mathf.Clamp01(ratio);
+        if (ratio <= 0.001f)
+        {
+            bossFillMask.gameObject.SetActive(false);
+            return;
+        }
+
+        if (!bossFillMask.gameObject.activeSelf)
+            bossFillMask.gameObject.SetActive(true);
+
+        float w = bossFullWidth * ratio;
+        bossFillMask.sizeDelta = new Vector2(Mathf.Max(2f, w), bossFillHeight);
+
+        if (bossFillImage != null)
+            bossFillImage.enabled = true;
+    }
+
+    private void EnsureBossFillLayout()
+    {
+        if (bossFillLayoutReady || bossFillMask == null) return;
+        bossFillLayoutReady = true;
+
+        if (bossFillMask.sizeDelta.y > 1f)
+            bossFillHeight = bossFillMask.sizeDelta.y;
+
+        // 从左往右缩短
+        bossFillMask.pivot = new Vector2(0f, 0.5f);
+
+        if (bossFillImage == null)
+            bossFillImage = bossFillMask.GetComponentInChildren<RawImage>(true);
+
+        if (bossFillImage != null)
+        {
+            var fillRt = bossFillImage.rectTransform;
+            // 填满父 Mask：宽度变时整图缩放，保留椭圆两端
+            fillRt.anchorMin = Vector2.zero;
+            fillRt.anchorMax = Vector2.one;
+            fillRt.offsetMin = Vector2.zero;
+            fillRt.offsetMax = Vector2.zero;
+            fillRt.localScale = Vector3.one;
+            fillRt.pivot = new Vector2(0.5f, 0.5f);
+            bossFillImage.raycastTarget = false;
         }
     }
 }

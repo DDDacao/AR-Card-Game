@@ -32,11 +32,13 @@ public enum WeaknessType
 }
 
 /// <summary>
-/// 敌人意图（决定本回合暴露的弱点与敌方行动）
+/// 敌人意图（决定本回合暴露的弱点与敌方行动）。
+/// 弱点颜色由 IntentStep.exposedWeakness 配置，可为 None（本回合无弱点）。
 /// </summary>
 public enum EnemyIntentKind
 {
-    Attack,  // 准备攻击 → 红弱点
-    Defend,  // 正在防御 → 黄弱点
-    Charge   // 正在蓄力 → 紫弱点
+    Attack,  // 攻击：造成 power 点伤害
+    Defend,  // 防御：获得 armorGain 点护甲
+    Charge,  // 蓄力蓄势：本步不造成伤害；可被镇魂打断；打断失败则进入 IsCharging
+    Heavy    // 蓄力释放：仅当上一蓄力未被打断时造成 power 点伤害
 }

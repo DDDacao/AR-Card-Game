@@ -69,7 +69,9 @@ public sealed class BattleHudArtSkin : MonoBehaviour
         RectTransform boss = CreateRect("BossHealth", root, new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(0, -74), new Vector2(1160, 286));
         CreateRaw("Frame", boss, bossFrame, Uv(80, 473, 1616, 400), Vector2.zero, boss.sizeDelta);
         bossFillMask = CreateMask("FillMask", boss, new Vector2(0, .5f), new Vector2(0, .5f), Vector2.zero, new Vector2(1160, 286), new Vector2(0, .5f));
-        CreateRaw("Fill", bossFillMask, bossFill, Uv(188, 577, 1444, 200), Vector2.zero, new Vector2(1160, 286));
+        // Fill 拉伸填满 Mask：血量变短时整条胶囊缩放，保留圆角
+        CreateRaw("Fill", bossFillMask, bossFill, Uv(188, 577, 1444, 200),
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(.5f, .5f));
 
         // 状态图标只显示当前弱点和灼伤层数；不会改动场景中的真实弱点或 QTE。
         weaknessImage = CreateRaw("Weakness", root, weakRed, Uv(250, 500, 1250, 1250), new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(-92, -265), new Vector2(104, 104));
@@ -133,20 +135,9 @@ public sealed class BattleHudArtSkin : MonoBehaviour
             armorText.text = player.CurrentArmor.ToString();
         }
 
-        if (intent == null)
-        {
+        // 世界空间弱点特效已足够，HUD 血条旁弱点图标永久关闭
+        if (weaknessImage != null && weaknessImage.gameObject.activeSelf)
             weaknessImage.gameObject.SetActive(false);
-        }
-        else
-        {
-            weaknessImage.gameObject.SetActive(intent.CurrentWeakness != WeaknessType.None);
-            switch (intent.CurrentWeakness)
-            {
-                case WeaknessType.YellowArmor: weaknessImage.texture = weakYellow; break;
-                case WeaknessType.PurpleSeal: weaknessImage.texture = weakPurple; break;
-                default: weaknessImage.texture = weakRed; break;
-            }
-        }
 
         int burn = enemy != null ? enemy.BurnStacks : 0;
         bool hasBurn = burn > 0;
@@ -172,7 +163,20 @@ public sealed class BattleHudArtSkin : MonoBehaviour
     {
         if (mask == null) return;
         float value = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;
-        mask.sizeDelta = new Vector2(fullWidth * value, 286);
+        float h = mask.sizeDelta.y > 1f ? mask.sizeDelta.y : 286f;
+        mask.sizeDelta = new Vector2(fullWidth * value, h);
+
+        // 确保填充层拉伸到 Mask 内（缩放胶囊而非硬裁切成方条）
+        var fill = mask.GetComponentInChildren<RawImage>(true);
+        if (fill != null)
+        {
+            var rt = fill.rectTransform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
+        }
     }
 
     private static Texture2D Load(string id) => Resources.Load<Texture2D>($"BattleHudSkin/{id}");

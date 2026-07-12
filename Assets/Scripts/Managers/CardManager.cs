@@ -121,30 +121,113 @@ public class CardManager : MonoBehaviour
             return;
         }
 
+        // 三关怪物共用：确保当前被打的敌人身上有意图/弱点控制器
+        var intent = EnsureEnemyIntent(enemy, weakness);
+        // 本回合只能打一次弱点（小妖 / 石灵 / 山鬼 同一规则）
+        bool weaknessStillOpen = intent != null && intent.CanTriggerWeaknessQte;
+
         bool canQte = hitWeakness
+                      && weaknessStillOpen
                       && weakness != null
                       && card.ResolveWeaknessTag() != WeaknessType.None
                       && weakness.weaknessType == card.ResolveWeaknessTag();
 
-        if (canQte && QTEManager.Instance != null)
+        if (canQte)
         {
             var weaknessType = weakness.weaknessType;
-            Debug.Log($"[CardManager] 命中弱点【{weaknessType}】，触发 QTE！牌：{card.cardName}");
-            // 成功回调在 QTE 结果界面关闭后触发（跳字/闪色对齐）
-            QTEManager.Instance.StartClickQTE(success =>
+            Debug.Log($"[CardManager] 命中弱点【{weaknessType}】，触发 QTE！牌：{card.cardName} 敌人：{enemy.name}");
+
+            // 触发 QTE 当即关闭本回合弱点（无论 QTE 成败，本回合不可再打弱点）
+            intent.ConsumeWeaknessThisTurn();
+
+            if (QTEManager.Instance != null)
             {
-                ApplyTargetedEffect(card, enemy, success, weaknessType);
+                // 成功回调在 QTE 结果界面关闭后触发（跳字/闪色对齐）
+                QTEManager.Instance.StartClickQTE(success =>
+                {
+                    ApplyTargetedEffect(card, enemy, success, weaknessType);
+                    if (TurnManager.Instance != null)
+                        TurnManager.Instance.CheckBattleEnd();
+                });
+            }
+            else
+            {
+                // 无 QTE 系统时视为直接成功，仍占用本回合弱点额度
+                ApplyTargetedEffect(card, enemy, true, weaknessType);
                 if (TurnManager.Instance != null)
                     TurnManager.Instance.CheckBattleEnd();
-            });
+            }
         }
         else
         {
-            var tag = hitWeakness && weakness != null ? weakness.weaknessType : WeaknessType.None;
+            if (hitWeakness && intent != null && intent.WeaknessExpendedThisTurn)
+                Debug.Log($"[CardManager] 【{card.cardName}】本回合弱点已用过（{enemy.name}），按普通命中结算。");
+
+            var tag = hitWeakness && weaknessStillOpen && weakness != null
+                ? weakness.weaknessType
+                : WeaknessType.None;
             ApplyTargetedEffect(card, enemy, false, tag);
             if (TurnManager.Instance != null)
                 TurnManager.Instance.CheckBattleEnd();
         }
+    }
+
+    /// <summary>
+    /// 解析/挂载当前敌人的意图控制器（三关各自怪物实例都适用）。
+    /// </summary>
+    private static EnemyIntentController EnsureEnemyIntent(CharacterStats enemy, WeaknessPoint weakness)
+    {
+        if (enemy == null) return null;
+
+        EnemyIntentController intent = null;
+
+        // 1) 优先用 TurnManager 上当前对战敌人（开战时已注入）
+        if (TurnManager.Instance != null && TurnManager.Instance.enemyStats == enemy)
+        {
+            intent = TurnManager.Instance.enemyIntent;
+            if (intent == null)
+            {
+                TurnManager.Instance.SetEnemyTarget(enemy);
+                intent = TurnManager.Instance.enemyIntent;
+            }
+        }
+
+        // 2) 从被命中的弱点向上找
+        if (intent == null && weakness != null)
+        {
+            intent = weakness.GetComponentInParent<EnemyIntentController>();
+            var owner = weakness.GetOwner();
+            if (intent == null && owner != null)
+            {
+                intent = owner.GetComponent<EnemyIntentController>();
+                if (intent == null)
+                    intent = owner.GetComponentInParent<EnemyIntentController>();
+            }
+        }
+
+        // 3) 敌人自身 / 子树
+        if (intent == null)
+        {
+            intent = enemy.GetComponent<EnemyIntentController>();
+            if (intent == null)
+                intent = enemy.GetComponentInParent<EnemyIntentController>();
+            if (intent == null)
+                intent = enemy.GetComponentInChildren<EnemyIntentController>();
+            if (intent == null)
+                intent = enemy.gameObject.AddComponent<EnemyIntentController>();
+        }
+
+        if (intent != null)
+        {
+            if (intent.stats == null || intent.stats != enemy)
+                intent.stats = enemy;
+
+            // 与 TurnManager 保持一致，避免 HUD / 出牌各用各的实例
+            if (TurnManager.Instance != null && TurnManager.Instance.enemyStats == enemy)
+                TurnManager.Instance.enemyIntent = intent;
+        }
+
+        return intent;
     }
 
     private void ApplyTargetedEffect(CardDataSO card, CharacterStats enemy, bool qteSuccess, WeaknessType hitWeaknessType)
