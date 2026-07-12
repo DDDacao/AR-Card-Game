@@ -638,6 +638,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 4533461424076634371, guid: 560475964f3f9b54bae277aae3e78b07, type: 3}
+      propertyPath: introVideo
+      value: 
+      objectReference: {fileID: 32900000, guid: 0944639a245f8384db4819e5a6ffea11, type: 3}
+    - target: {fileID: 4533461424076634371, guid: 560475964f3f9b54bae277aae3e78b07, type: 3}
+      propertyPath: framesResourcePath
+      value: StartIntroFrames
+      objectReference: {fileID: 0}
     - target: {fileID: 6628172658800802579, guid: 560475964f3f9b54bae277aae3e78b07, type: 3}
       propertyPath: m_LocalPosition.x
       value: 15.30633
