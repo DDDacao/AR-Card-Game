@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: enemy_shiling
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: "\u77F3\u7075"
-  maxHP: 32
+  maxHP: 40
   maxEnergy: 0
   startArmor: 6

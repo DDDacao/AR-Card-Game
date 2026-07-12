@@ -4,7 +4,9 @@ using UnityEngine.Rendering;
 using DG.Tweening;
 
 /// <summary>
-/// 符匣：固定顺序发牌，用后本场消耗，不洗牌、无弃牌堆回灌。
+/// 符匣：固定顺序发牌；打出后本场从手牌移除。
+/// 牌序列抽完后可按同一设计顺序循环补牌（避免后期无牌可抽）。
+/// 怪物意图侧由 EnemyIntentController 对 intentLoop 取模循环。
 /// </summary>
 public class CardDeck : MonoBehaviour
 {
@@ -31,6 +33,13 @@ public class CardDeck : MonoBehaviour
     [Tooltip("奖励卡插入基础符匣的固定时机；由关卡 SO 提供，不写入 SO。")]
     public List<BattleStageSO.RewardCardInsertion> runtimeRewardInsertions = new List<BattleStageSO.RewardCardInsertion>();
 
+    [Header("循环补牌（走完设计序列后）")]
+    [Tooltip("牌堆抽空后，按本场「基础固定顺序」再循环一轮，保证长战斗仍有牌可发")]
+    public bool loopDeckWhenEmpty = true;
+
+    [Tooltip("循环时是否把本场已获得的奖励卡也追加进序列（玩家构筑可持续用）")]
+    public bool includeEarnedRewardsInLoop = true;
+
     [Header("手牌上限")]
     public int handLimit = DefaultHandLimit;
 
@@ -39,24 +48,29 @@ public class CardDeck : MonoBehaviour
     public float handCardScale = 0.45f;
 
     private List<CardDataSO> drawDeck = new();   // 符匣剩余
+    private List<CardDataSO> loopSourceSequence = new(); // 循环用的基础序列快照
     private List<Card> handCardObjectList = new();
     private List<CardDataSO> consumedThisBattle = new(); // 本场已使用（仅记录）
     private readonly HashSet<int> usedRewardInsertionIndexes = new();
     private int baseCardsDrawn;
+    private int deckLoopCount;
 
     public int HandCount => handCardObjectList.Count;
     public int DrawDeckCount => drawDeck.Count;
     public int HandLimit => handLimit;
     public int ConsumedCount => consumedThisBattle.Count;
+    public int DeckLoopCount => deckLoopCount;
     public FuXiaOrderSO ActiveFuXia => fuXiaOrder;
 
     public void InitializeDeck()
     {
         drawDeck.Clear();
+        loopSourceSequence.Clear();
         handCardObjectList.Clear();
         consumedThisBattle.Clear();
         usedRewardInsertionIndexes.Clear();
         baseCardsDrawn = 0;
+        deckLoopCount = 0;
 
         if (cardManager == null)
             cardManager = FindAnyObjectByType<CardManager>();
@@ -73,11 +87,13 @@ public class CardDeck : MonoBehaviour
                         drawDeck.Insert(0, runtimePrefixCards[i]);
                 }
             }
-            Debug.Log($"[CardDeck] 符匣固定顺序加载：{fuXiaOrder.displayName}，基础 {drawDeck.Count} 张，奖励插入点 {runtimeRewardInsertions?.Count ?? 0} 个。");
+            // 快照基础序列，供抽空后循环（不含「一次性」奖励插入，奖励由 includeEarnedRewardsInLoop 处理）
+            loopSourceSequence = new List<CardDataSO>(drawDeck);
+            Debug.Log($"[CardDeck] 符匣固定顺序加载：{fuXiaOrder.displayName}，基础 {drawDeck.Count} 张，循环={(loopDeckWhenEmpty ? "开" : "关")}，奖励插入点 {runtimeRewardInsertions?.Count ?? 0} 个。");
             return;
         }
 
-        // 回退：从 CardLibrary 按 amount 展开（顺序即列表顺序，仍不洗牌）
+        // 回退：从 CardLibrary 按 amount 展开（顺序即列表顺序）
         if (cardManager == null || cardManager.currentLibrary == null)
         {
             Debug.LogError("[CardDeck] 未配置 FuXiaOrder，且 CardManager/currentLibrary 无效。");
@@ -90,7 +106,8 @@ public class CardDeck : MonoBehaviour
             for (int i = 0; i < entry.amount; i++)
                 drawDeck.Add(entry.cardData);
         }
-        Debug.Log($"[CardDeck] 使用牌库展开（无洗牌），共 {drawDeck.Count} 张");
+        loopSourceSequence = new List<CardDataSO>(drawDeck);
+        Debug.Log($"[CardDeck] 使用牌库展开，共 {drawDeck.Count} 张，循环={(loopDeckWhenEmpty ? "开" : "关")}");
     }
 
     /// <summary>
@@ -154,6 +171,7 @@ public class CardDeck : MonoBehaviour
     {
         card = null;
 
+        // 一次性奖励插入（按关卡计划，仅第一轮序列生效）
         if (runtimeRewardInsertions != null)
         {
             for (int i = 0; i < runtimeRewardInsertions.Count; i++)
@@ -177,11 +195,52 @@ public class CardDeck : MonoBehaviour
             }
         }
 
+        if (drawDeck.Count == 0)
+            TryRefillDeckLoop();
+
         if (drawDeck.Count == 0) return false;
         card = drawDeck[0];
         drawDeck.RemoveAt(0);
         baseCardsDrawn++;
         return card != null;
+    }
+
+    /// <summary>
+    /// 设计序列抽空后：按同一固定顺序再装一轮（可选附带已获奖励卡）。
+    /// </summary>
+    private void TryRefillDeckLoop()
+    {
+        if (!loopDeckWhenEmpty) return;
+
+        if (loopSourceSequence == null || loopSourceSequence.Count == 0)
+        {
+            if (useFixedOrder && fuXiaOrder != null && fuXiaOrder.TotalCount > 0)
+                loopSourceSequence = fuXiaOrder.CreateRuntimeQueue();
+        }
+
+        if (loopSourceSequence == null || loopSourceSequence.Count == 0)
+        {
+            Debug.LogWarning("[CardDeck] 无法循环补牌：循环源序列为空。");
+            return;
+        }
+
+        for (int i = 0; i < loopSourceSequence.Count; i++)
+        {
+            if (loopSourceSequence[i] != null)
+                drawDeck.Add(loopSourceSequence[i]);
+        }
+
+        if (includeEarnedRewardsInLoop && runtimeEarnedRewards != null)
+        {
+            for (int i = 0; i < runtimeEarnedRewards.Count; i++)
+            {
+                if (runtimeEarnedRewards[i] != null)
+                    drawDeck.Add(runtimeEarnedRewards[i]);
+            }
+        }
+
+        deckLoopCount++;
+        Debug.Log($"[CardDeck] 符匣循环第 {deckLoopCount} 轮，补入 {drawDeck.Count} 张（基础序列 {loopSourceSequence.Count} + 奖励循环）。");
     }
 
     public int DrawUpTo(int targetHandCount)
@@ -264,13 +323,15 @@ public class CardDeck : MonoBehaviour
     {
         DiscardHand();
         drawDeck.Clear();
+        loopSourceSequence.Clear();
         consumedThisBattle.Clear();
         usedRewardInsertionIndexes.Clear();
         baseCardsDrawn = 0;
+        deckLoopCount = 0;
     }
 
     /// <summary>
-    /// 打出卡牌：从手牌移除（本场消耗，不回符匣）
+    /// 打出卡牌：从手牌移除。本场打出的牌记入消耗；牌堆侧靠「循环设计序列」持续补牌。
     /// </summary>
     public void RemoveCardFromHand(Card card)
     {

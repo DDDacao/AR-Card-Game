@@ -134,9 +134,9 @@ public static class ApplyPlanCardData
         SetStageIntentLoop("Stage_02_ShiLing", new List<EnemyIntentController.IntentStep>
         {
             Step(EnemyIntentKind.Defend, "正在防御", WeaknessType.YellowArmor, 0, 8),
-            Step(EnemyIntentKind.Attack, "普通攻击", WeaknessType.None, 6, 0),
+            Step(EnemyIntentKind.Attack, "普通攻击", WeaknessType.RedAttack, 6, 0),
             Step(EnemyIntentKind.Defend, "正在防御", WeaknessType.YellowArmor, 0, 6),
-            Step(EnemyIntentKind.Attack, "重击", WeaknessType.None, 10, 0),
+            Step(EnemyIntentKind.Attack, "重击", WeaknessType.RedAttack, 10, 0),
         });
         SetStageIntentLoop("Stage_03_ShanGui", new List<EnemyIntentController.IntentStep>
         {

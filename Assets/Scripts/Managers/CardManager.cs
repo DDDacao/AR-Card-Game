@@ -278,8 +278,22 @@ public class CardManager : MonoBehaviour
                 break;
 
             case CardType.ArmorBreak:
-                // 破甲：先结算伤害；QTE 成功再额外破甲（effectValue2，默认等于 effectValue）
-                ApplyDamageWithPopup(enemy, totalDmg, qteSuccess);
+                // 黄弱点 QTE 成功：先清空全部护甲，再造成伤害（伤害直接打在血上）
+                // 未 QTE：先小额破甲，再正常结算伤害（仍会先吃剩余护甲）
+                if (qteSuccess)
+                {
+                    int before = enemy.CurrentArmor;
+                    enemy.ClearArmor();
+                    ApplyDamageWithPopup(enemy, totalDmg, true);
+                    Debug.Log($"[CardManager] QTE 成功！【{card.cardName}】先清甲 {before}→0，再造成 {totalDmg} 点伤害");
+                }
+                else
+                {
+                    int strip = Mathf.Max(2, card.effectValue / 2);
+                    int stripped = enemy.StripArmor(strip);
+                    ApplyDamageWithPopup(enemy, totalDmg, false);
+                    Debug.Log($"[CardManager] 【{card.cardName}】破甲 {stripped}，再造成 {baseDmg} 点伤害");
+                }
                 if (card.specialEffect == CardSpecialEffect.DetonateBurn)
                 {
                     int stacks = enemy.ConsumeBurn();
@@ -288,19 +302,6 @@ public class CardManager : MonoBehaviour
                     if (burstDamage > 0)
                         ApplyDamageWithPopup(enemy, burstDamage, qteSuccess);
                     Debug.Log($"[CardManager] 【{card.cardName}】引爆 {stacks} 层灼烧，额外造成 {burstDamage} 点伤害。");
-                }
-                if (qteSuccess)
-                {
-                    int strip = card.effectValue2 > 0 ? card.effectValue2 : card.effectValue;
-                    int stripped = enemy.StripArmor(strip);
-                    Debug.Log($"[CardManager] QTE 成功！【{card.cardName}】伤害 {totalDmg}，破甲 {stripped}");
-                }
-                else
-                {
-                    // 未 QTE 时也对护甲有小额破甲（策划：对护甲额外有效）
-                    int strip = Mathf.Max(2, card.effectValue / 2);
-                    int stripped = enemy.StripArmor(strip);
-                    Debug.Log($"[CardManager] 【{card.cardName}】伤害 {baseDmg}，破甲 {stripped}");
                 }
                 break;
 

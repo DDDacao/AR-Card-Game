@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: player
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: player
-  maxHP: 50
+  maxHP: 30
   maxEnergy: 3
   startArmor: 0
