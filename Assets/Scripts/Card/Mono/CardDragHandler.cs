@@ -96,7 +96,7 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
         if (!canMove) return;
 
-        Vector3 screenPos = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 6);
+        Vector3 screenPos = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 5);
         Camera dragCamera = (CardCameraManager.Instance != null && CardCameraManager.Instance.cardCamera != null)
             ? CardCameraManager.Instance.cardCamera
             : Camera.main;
