@@ -122,6 +122,7 @@ public static class SetupMonsterPrefabWeaknesses
         wp.followTarget = null;
         wp.followLocalOffset = Vector3.zero;
         wp.owner = null; // 运行时由 CharacterStats 向上找 / AnchorSetup 赋值
+        wp.keepManualPlacement = true; // Prefab 里可手调位置，开战不再覆盖
     }
 
     static void DisableSceneLegacyWeaknesses()

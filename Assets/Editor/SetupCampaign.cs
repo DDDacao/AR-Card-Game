@@ -77,15 +77,15 @@ public static class SetupCampaign
             attack, attack
         });
 
-        // ---- 关卡 ----
+        // ---- 关卡（意图/弱点对齐策划案 §10 三场战斗回合表）----
         var stage1 = CreateStage("Stage_01_XiaoYao", "第一关·小妖", "小妖", dataXiao, fx1,
-            IntentAttackDefendCharge(5, 0, 8),
+            IntentXiaoYao(),
             new List<CardDataSO> { rLian, rHuo, rLing });
         var stage2 = CreateStage("Stage_02_ShiLing", "第二关·石灵", "石灵", dataShi, fx2,
-            IntentDefendFocus(6, 8, 10),
+            IntentShiLing(),
             new List<CardDataSO> { rPozhen, rYinhuo, rDing });
         var stage3 = CreateStage("Stage_03_ShanGui", "第三关·山鬼", "山鬼", dataBoss, fx3,
-            IntentBoss(8, 8, 18),
+            IntentShanGui(),
             null);
         stage1.rewardInsertions = new List<BattleStageSO.RewardCardInsertion>();
         stage2.rewardInsertions = new List<BattleStageSO.RewardCardInsertion>
@@ -266,35 +266,85 @@ public static class SetupCampaign
         return so;
     }
 
-    static List<EnemyIntentController.IntentStep> IntentAttackDefendCharge(int atk, int armor, int charge)
+    /// <summary>策划案：小妖 — T1 攻5红 / T2 攻5无 / T3 攻7红，循环。</summary>
+    static List<EnemyIntentController.IntentStep> IntentXiaoYao()
     {
         return new List<EnemyIntentController.IntentStep>
         {
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Attack, displayName = "普通攻击", exposedWeakness = WeaknessType.RedAttack, power = atk },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Defend, displayName = "正在防御", exposedWeakness = WeaknessType.YellowArmor, armorGain = armor > 0 ? armor : 6 },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Charge, displayName = "蓄力中", exposedWeakness = WeaknessType.PurpleSeal, power = charge }
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Attack, displayName = "普通攻击",
+                exposedWeakness = WeaknessType.RedAttack, power = 5
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Attack, displayName = "普通攻击",
+                exposedWeakness = WeaknessType.None, power = 5
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Attack, displayName = "攻击",
+                exposedWeakness = WeaknessType.RedAttack, power = 7
+            }
         };
     }
 
-    static List<EnemyIntentController.IntentStep> IntentDefendFocus(int atk, int armorGain, int heavy)
+    /// <summary>策划案：石灵 — T1 防8黄 / T2 攻6无 / T3 防6黄 / T4 重击10无，循环。</summary>
+    static List<EnemyIntentController.IntentStep> IntentShiLing()
     {
         return new List<EnemyIntentController.IntentStep>
         {
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Defend, displayName = "正在防御", exposedWeakness = WeaknessType.YellowArmor, armorGain = armorGain },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Attack, displayName = "普通攻击", exposedWeakness = WeaknessType.RedAttack, power = atk },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Defend, displayName = "正在防御", exposedWeakness = WeaknessType.YellowArmor, armorGain = armorGain - 2 },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Charge, displayName = "蓄力中", exposedWeakness = WeaknessType.PurpleSeal, power = heavy }
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Defend, displayName = "正在防御",
+                exposedWeakness = WeaknessType.YellowArmor, armorGain = 8
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Attack, displayName = "普通攻击",
+                exposedWeakness = WeaknessType.None, power = 6
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Defend, displayName = "正在防御",
+                exposedWeakness = WeaknessType.YellowArmor, armorGain = 6
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Attack, displayName = "重击",
+                exposedWeakness = WeaknessType.None, power = 10
+            }
         };
     }
 
-    static List<EnemyIntentController.IntentStep> IntentBoss(int atk, int armor, int charge)
+    /// <summary>
+    /// 策划案：山鬼 — T1 攻8红 / T2 防8黄 / T3 蓄力紫 / T4 重击18无（未打断才结算），循环。
+    /// 策划表第 5 回合「普通攻击 8 红」即循环回到 T1。
+    /// </summary>
+    static List<EnemyIntentController.IntentStep> IntentShanGui()
     {
         return new List<EnemyIntentController.IntentStep>
         {
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Attack, displayName = "普通攻击", exposedWeakness = WeaknessType.RedAttack, power = atk },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Defend, displayName = "正在防御", exposedWeakness = WeaknessType.YellowArmor, armorGain = armor },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Charge, displayName = "蓄力中", exposedWeakness = WeaknessType.PurpleSeal, power = charge },
-            new EnemyIntentController.IntentStep { kind = EnemyIntentKind.Attack, displayName = "普通攻击", exposedWeakness = WeaknessType.RedAttack, power = atk }
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Attack, displayName = "普通攻击",
+                exposedWeakness = WeaknessType.RedAttack, power = 8
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Defend, displayName = "正在防御",
+                exposedWeakness = WeaknessType.YellowArmor, armorGain = 8
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Charge, displayName = "蓄力中",
+                exposedWeakness = WeaknessType.PurpleSeal, power = 0
+            },
+            new EnemyIntentController.IntentStep
+            {
+                kind = EnemyIntentKind.Heavy, displayName = "重击",
+                exposedWeakness = WeaknessType.None, power = 18
+            }
         };
     }
 

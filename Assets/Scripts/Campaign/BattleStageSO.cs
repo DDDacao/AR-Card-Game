@@ -29,7 +29,8 @@ public class BattleStageSO : ScriptableObject
     [Header("已获奖励的固定插入时机")]
     public List<RewardCardInsertion> rewardInsertions = new List<RewardCardInsertion>();
 
-    [Header("意图循环（空则用 EnemyIntentController 默认）")]
+    [Header("意图/弱点回合表（按策划案配置；空则用 EnemyIntentController 默认）")]
+    [Tooltip("每步独立配置行动与 exposedWeakness（可为 None=本回合无弱点）。循环播放。")]
     public List<EnemyIntentController.IntentStep> intentLoop = new List<EnemyIntentController.IntentStep>();
 
     [Header("通关后奖励（三选一，Boss 关可留空）")]

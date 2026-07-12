@@ -30,16 +30,16 @@ MonoBehaviour:
   - kind: 1
     displayName: "\u6B63\u5728\u9632\u5FA1"
     exposedWeakness: 2
-    power: 5
+    power: 0
     armorGain: 8
   - kind: 2
     displayName: "\u84C4\u529B\u4E2D"
     exposedWeakness: 3
-    power: 18
+    power: 0
     armorGain: 0
-  - kind: 0
-    displayName: "\u666E\u901A\u653B\u51FB"
-    exposedWeakness: 1
-    power: 8
+  - kind: 3
+    displayName: "\u91CD\u51FB"
+    exposedWeakness: 0
+    power: 18
     armorGain: 0
   rewardChoices: []

@@ -23,21 +23,21 @@ MonoBehaviour:
   - kind: 1
     displayName: "\u6B63\u5728\u9632\u5FA1"
     exposedWeakness: 2
-    power: 5
+    power: 0
     armorGain: 8
   - kind: 0
     displayName: "\u666E\u901A\u653B\u51FB"
-    exposedWeakness: 1
+    exposedWeakness: 0
     power: 6
     armorGain: 0
   - kind: 1
     displayName: "\u6B63\u5728\u9632\u5FA1"
     exposedWeakness: 2
-    power: 5
+    power: 0
     armorGain: 6
-  - kind: 2
-    displayName: "\u84C4\u529B\u4E2D"
-    exposedWeakness: 3
+  - kind: 0
+    displayName: "\u91CD\u51FB"
+    exposedWeakness: 0
     power: 10
     armorGain: 0
   rewardChoices:

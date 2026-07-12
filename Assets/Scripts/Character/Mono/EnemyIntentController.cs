@@ -4,7 +4,10 @@ using UnityEngine;
 
 /// <summary>
 /// 敌人意图循环 + 按意图显示对应弱点。
-/// 默认循环：攻击(红) → 防御(黄) → 蓄力(紫) → …
+/// 三关（小妖 / 石灵 / 山鬼）共用同一套规则：
+/// - 意图与弱点由各关 <see cref="BattleStageSO.intentLoop"/> 配置；
+/// - 每玩家回合弱点最多触发 1 次 QTE，触发后当回合消失。
+/// Boss 蓄力为两步：Charge（紫）→ Heavy（无弱点，若未打断则结算重击）。
 /// </summary>
 public class EnemyIntentController : MonoBehaviour
 {
@@ -13,11 +16,24 @@ public class EnemyIntentController : MonoBehaviour
     {
         public EnemyIntentKind kind = EnemyIntentKind.Attack;
         public string displayName = "普通攻击";
-        public WeaknessType exposedWeakness = WeaknessType.RedAttack;
-        [Tooltip("攻击/蓄力结算伤害")]
+        [Tooltip("本回合暴露的弱点；None = 本回合无弱点（不可触发弱点 QTE）")]
+        public WeaknessType exposedWeakness = WeaknessType.None;
+        [Tooltip("攻击 / 重击结算伤害")]
         public int power = 5;
         [Tooltip("防御时获得的护甲")]
         public int armorGain = 0;
+
+        public IntentStep Clone()
+        {
+            return new IntentStep
+            {
+                kind = kind,
+                displayName = displayName,
+                exposedWeakness = exposedWeakness,
+                power = power,
+                armorGain = armorGain
+            };
+        }
     }
 
     [Header("意图表（按顺序循环）")]
@@ -32,10 +48,31 @@ public class EnemyIntentController : MonoBehaviour
     public int CurrentStepIndex { get; private set; }
     public IntentStep CurrentStep { get; private set; }
     public string CurrentDisplayName => CurrentStep != null ? CurrentStep.displayName : "—";
-    public WeaknessType CurrentWeakness => CurrentStep != null ? CurrentStep.exposedWeakness : WeaknessType.None;
 
-    /// <summary>镇魂 QTE 成功后打断蓄力</summary>
+    /// <summary>
+    /// 当前意图配置的弱点类型（不含「本回合已击破」状态）。
+    /// </summary>
+    public WeaknessType PlannedWeakness =>
+        CurrentStep != null ? CurrentStep.exposedWeakness : WeaknessType.None;
+
+    /// <summary>
+    /// 实际可命中的弱点：本回合已触发过 QTE 后视为 None（弱点消失）。
+    /// </summary>
+    public WeaknessType CurrentWeakness =>
+        WeaknessExpendedThisTurn ? WeaknessType.None : PlannedWeakness;
+
+    /// <summary>本回合是否已用掉弱点（命中并触发 QTE 后为 true）</summary>
+    public bool WeaknessExpendedThisTurn { get; private set; }
+
+    /// <summary>当前是否还能对弱点触发 QTE</summary>
+    public bool CanTriggerWeaknessQte =>
+        !WeaknessExpendedThisTurn && PlannedWeakness != WeaknessType.None;
+
+    /// <summary>镇魂 QTE 成功后打断蓄力（在蓄力回合内有效）</summary>
     public bool ChargeInterrupted { get; private set; }
+
+    /// <summary>蓄力蓄势已完成且未被打断，等待重击释放</summary>
+    public bool IsCharging { get; private set; }
 
     public event Action OnIntentChanged;
 
@@ -43,14 +80,16 @@ public class EnemyIntentController : MonoBehaviour
     {
         if (stats == null)
             stats = GetComponent<CharacterStats>();
-        if (weaknessPoints == null || weaknessPoints.Count == 0)
-            weaknessPoints = new List<WeaknessPoint>(GetComponentsInChildren<WeaknessPoint>(true));
+        if (stats == null)
+            stats = GetComponentInParent<CharacterStats>();
+        RefreshWeaknessList();
         EnsureDefaultLoop();
     }
 
     private void EnsureDefaultLoop()
     {
         if (intentLoop != null && intentLoop.Count > 0) return;
+        // 与策划案「小妖」教学节奏类似的回退表
         intentLoop = new List<IntentStep>
         {
             new IntentStep
@@ -62,26 +101,54 @@ public class EnemyIntentController : MonoBehaviour
             },
             new IntentStep
             {
-                kind = EnemyIntentKind.Defend,
-                displayName = "正在防御",
-                exposedWeakness = WeaknessType.YellowArmor,
-                power = 0,
-                armorGain = 6
+                kind = EnemyIntentKind.Attack,
+                displayName = "普通攻击",
+                exposedWeakness = WeaknessType.None,
+                power = 5
             },
             new IntentStep
             {
-                kind = EnemyIntentKind.Charge,
-                displayName = "蓄力中",
-                exposedWeakness = WeaknessType.PurpleSeal,
-                power = 12
+                kind = EnemyIntentKind.Attack,
+                displayName = "攻击",
+                exposedWeakness = WeaknessType.RedAttack,
+                power = 7
             }
         };
+    }
+
+    /// <summary>
+    /// 从关卡数据深拷贝意图表，避免与 SO 共享引用、并保证每步字段完整。
+    /// </summary>
+    public void SetIntentLoop(IList<IntentStep> source, bool resetToFirst = true)
+    {
+        intentLoop = new List<IntentStep>();
+        if (source != null)
+        {
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (source[i] == null) continue;
+                intentLoop.Add(source[i].Clone());
+            }
+        }
+
+        EnsureDefaultLoop();
+
+        if (resetToFirst)
+        {
+            ResetIntent();
+        }
+        else
+        {
+            ApplyCurrentStep();
+        }
     }
 
     public void ResetIntent()
     {
         CurrentStepIndex = 0;
         ChargeInterrupted = false;
+        IsCharging = false;
+        WeaknessExpendedThisTurn = false;
         ApplyCurrentStep();
     }
 
@@ -90,21 +157,50 @@ public class EnemyIntentController : MonoBehaviour
     /// </summary>
     public void PresentIntentForPlayerTurn()
     {
+        // 新一回合展示时清掉「本回合刚打断」的瞬时标记；
+        // IsCharging 需跨回合保留（蓄力 → 下一回合释放重击）。
         ChargeInterrupted = false;
+        // 每玩家回合刷新：恢复本回合可击破一次的弱点额度
+        WeaknessExpendedThisTurn = false;
+        // 换模 / AR 恢复后可能丢引用，每次展示前重扫弱点
+        RefreshWeaknessList();
         ApplyCurrentStep();
+    }
+
+    /// <summary>
+    /// 命中弱点并触发 QTE 后调用：本回合弱点立即消失，不可再次弱点 QTE。
+    /// 对当前挂载此组件的任意怪物生效（不限关卡）。
+    /// </summary>
+    public void ConsumeWeaknessThisTurn()
+    {
+        if (WeaknessExpendedThisTurn) return;
+        WeaknessExpendedThisTurn = true;
+        // 确保扫到的是本怪物身上的弱点点（换关后 stats / 子树可能变过）
+        if (stats == null)
+        {
+            stats = GetComponent<CharacterStats>();
+            if (stats == null)
+                stats = GetComponentInParent<CharacterStats>();
+        }
+        RefreshWeaknessVisibility();
+        OnIntentChanged?.Invoke();
+        Debug.Log($"[EnemyIntent] [{name}] 本回合弱点已击破，关闭弱点显示（本回合不可再 QTE）。");
     }
 
     public void InterruptCharge()
     {
+        // 仅在「正在蓄力」意图下可打断；打断后取消已挂起的重击
         if (CurrentStep != null && CurrentStep.kind == EnemyIntentKind.Charge)
         {
             ChargeInterrupted = true;
+            IsCharging = false;
             Debug.Log("[EnemyIntent] 蓄力被打断！");
+            OnIntentChanged?.Invoke();
         }
     }
 
     /// <summary>
-    /// 敌人回合执行当前意图，然后推进到下一步
+    /// 敌人回合执行当前意图，然后推进到下一步并立刻刷新弱点显示。
     /// </summary>
     public void ExecuteAndAdvance(CharacterStats player)
     {
@@ -112,6 +208,8 @@ public class EnemyIntentController : MonoBehaviour
             ApplyCurrentStep();
 
         var step = CurrentStep;
+        int executedIndex = CurrentStepIndex;
+
         if (step != null && stats != null && stats.CurrentHP > 0)
         {
             switch (step.kind)
@@ -120,7 +218,7 @@ public class EnemyIntentController : MonoBehaviour
                     if (player != null)
                     {
                         player.TakeDamage(step.power);
-                        Debug.Log($"[EnemyIntent] 普通攻击，造成 {step.power} 点伤害");
+                        Debug.Log($"[EnemyIntent] {step.displayName}，造成 {step.power} 点伤害");
                     }
                     break;
 
@@ -130,31 +228,65 @@ public class EnemyIntentController : MonoBehaviour
                     break;
 
                 case EnemyIntentKind.Charge:
+                    // 蓄势：本步不造成伤害。打断则不进入 IsCharging。
                     if (ChargeInterrupted)
                     {
-                        Debug.Log("[EnemyIntent] 蓄力被打断，本回合不释放重击。");
+                        IsCharging = false;
+                        Debug.Log("[EnemyIntent] 蓄力被打断，取消重击挂起。");
                     }
-                    else if (player != null)
+                    else
                     {
-                        player.TakeDamage(step.power);
-                        Debug.Log($"[EnemyIntent] 蓄力重击！造成 {step.power} 点伤害");
+                        IsCharging = true;
+                        Debug.Log("[EnemyIntent] 蓄力完成，下回合将释放重击。");
                     }
+                    break;
+
+                case EnemyIntentKind.Heavy:
+                    if (IsCharging && !ChargeInterrupted)
+                    {
+                        if (player != null)
+                        {
+                            player.TakeDamage(step.power);
+                            Debug.Log($"[EnemyIntent] 蓄力重击！造成 {step.power} 点伤害");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("[EnemyIntent] 重击未释放（蓄力已被打断或未蓄力）。");
+                    }
+                    IsCharging = false;
                     break;
             }
         }
+        else if (step == null)
+        {
+            Debug.LogWarning("[EnemyIntent] ExecuteAndAdvance：CurrentStep 为空，无法结算。");
+        }
 
-        // 推进意图
-        CurrentStepIndex = (CurrentStepIndex + 1) % Mathf.Max(1, intentLoop.Count);
+        // 推进到下一步，并立刻应用弱点（避免卡在上一步红弱点）
+        int count = intentLoop != null ? intentLoop.Count : 0;
+        if (count <= 0)
+        {
+            EnsureDefaultLoop();
+            count = intentLoop.Count;
+        }
+
+        CurrentStepIndex = (CurrentStepIndex + 1) % Mathf.Max(1, count);
         ChargeInterrupted = false;
-        // 下一步意图在玩家回合开始时 Present
+
+        RefreshWeaknessList();
+        ApplyCurrentStep();
+
+        Debug.Log($"[EnemyIntent] 推进 {executedIndex} → {CurrentStepIndex}/{count}，下一意图：{CurrentDisplayName}，弱点：{CurrentWeakness}");
     }
 
     private void ApplyCurrentStep()
     {
         EnsureDefaultLoop();
-        if (intentLoop.Count == 0)
+        if (intentLoop == null || intentLoop.Count == 0)
         {
             CurrentStep = null;
+            RefreshWeaknessVisibility();
             return;
         }
 
@@ -162,13 +294,17 @@ public class EnemyIntentController : MonoBehaviour
         CurrentStep = intentLoop[CurrentStepIndex];
         RefreshWeaknessVisibility();
         OnIntentChanged?.Invoke();
-        Debug.Log($"[EnemyIntent] 当前意图：{CurrentStep.displayName}，暴露弱点：{CurrentStep.exposedWeakness}");
+        Debug.Log($"[EnemyIntent] 当前步骤[{CurrentStepIndex}]：{CurrentStep.displayName}，暴露弱点：{CurrentStep.exposedWeakness}");
     }
 
     public void RefreshWeaknessVisibility()
     {
-        if (weaknessPoints == null) return;
-        var activeType = CurrentWeakness;
+        // 已击破 / 配置无弱点 → 全部关闭；否则只亮 PlannedWeakness 对应色
+        var activeType = WeaknessExpendedThisTurn ? WeaknessType.None : PlannedWeakness;
+
+        // 每次以场景里实际弱点为准，避免列表空/过期导致永远关不掉红点
+        RefreshWeaknessList();
+
         for (int i = 0; i < weaknessPoints.Count; i++)
         {
             var wp = weaknessPoints[i];
@@ -176,37 +312,53 @@ public class EnemyIntentController : MonoBehaviour
             bool on = activeType != WeaknessType.None && wp.weaknessType == activeType;
             wp.SetActiveWeakness(on);
         }
+
+        Debug.Log($"[EnemyIntent] 弱点刷新：planned={PlannedWeakness} active={activeType} expended={WeaknessExpendedThisTurn} 点数={weaknessPoints.Count}");
     }
 
     public void RefreshWeaknessList()
     {
         weaknessPoints = new List<WeaknessPoint>();
+        var seen = new HashSet<WeaknessPoint>();
 
-        // 优先使用换模后的 ActiveMonster 上的弱点（Prefab 内）
+        void AddRange(WeaknessPoint[] arr)
+        {
+            if (arr == null) return;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                var wp = arr[i];
+                if (wp == null || seen.Contains(wp)) continue;
+                // 排除已废弃的场景直属 Weakness_*（Ellen 旧节点）
+                if (wp.transform.parent == transform && wp.name.StartsWith("Weakness_")
+                    && !wp.gameObject.activeSelf && wp.transform.Find("WeaknessVisual") == null)
+                {
+                    // 仍允许加入：意图系统会负责 SetActive；旧节点由 AnchorSetup 关掉
+                }
+                seen.Add(wp);
+                weaknessPoints.Add(wp);
+            }
+        }
+
+        // 1) ActiveMonster（旧换模路径）
         Transform activeMonster = transform.Find("ActiveMonster");
         if (activeMonster != null)
-        {
-            var onMonster = activeMonster.GetComponentsInChildren<WeaknessPoint>(true);
-            if (onMonster != null && onMonster.Length > 0)
-            {
-                weaknessPoints.AddRange(onMonster);
-                return;
-            }
-        }
+            AddRange(activeMonster.GetComponentsInChildren<WeaknessPoint>(true));
 
-        // 回退：整棵子树（并跳过已禁用的场景旧弱点）
-        var all = GetComponentsInChildren<WeaknessPoint>(true);
-        for (int i = 0; i < all.Length; i++)
+        // 2) 自身子树（当前三关：弱点直接挂在怪物 Prefab 头骨下）
+        AddRange(GetComponentsInChildren<WeaknessPoint>(true));
+
+        // 3) 若 Intent 挂在父节点，stats 在子物体上，再扫一层
+        if (stats != null && stats.transform != transform)
+            AddRange(stats.GetComponentsInChildren<WeaknessPoint>(true));
+
+        // 4) 父级 CharacterStats（Intent 挂在子物体时）
+        if (stats == null)
         {
-            if (all[i] == null) continue;
-            // 场景 Ellen 根下旧 Weakness_* 若被关掉仍会扫到，仅收集 activeSelf 或在 ActiveMonster 下的
-            if (!all[i].gameObject.activeInHierarchy && all[i].transform.root == transform.root)
-            {
-                // 允许 inactive 的弱点仍进列表（意图会 SetActive），但排除被永久废弃的场景直属节点
-                if (all[i].transform.parent == transform && all[i].name.StartsWith("Weakness_"))
-                    continue;
-            }
-            weaknessPoints.Add(all[i]);
+            stats = GetComponent<CharacterStats>();
+            if (stats == null)
+                stats = GetComponentInParent<CharacterStats>();
         }
+        if (stats != null && stats.transform != transform)
+            AddRange(stats.GetComponentsInChildren<WeaknessPoint>(true));
     }
 }

@@ -91,6 +91,9 @@ public static class ApplyPlanCardData
             new BattleStageSO.RewardCardInsertion { afterBaseCardsDrawn = 3, earnedRewardIndex = 0 },
             new BattleStageSO.RewardCardInsertion { afterBaseCardsDrawn = 5, earnedRewardIndex = 1 });
 
+        // 策划案 §10 每关意图/弱点回合表
+        ApplyPlanIntentLoops();
+
         // 同步 CardDeck 上的符匣引用到当前关（默认小妖）
         var deck = Object.FindAnyObjectByType<CardDeck>();
         if (deck != null)
@@ -113,8 +116,61 @@ public static class ApplyPlanCardData
         string preview = BuildOrderPreview();
         Debug.Log("[ApplyPlanCardData] 完成。\n" + preview);
         EditorUtility.DisplayDialog("按策划重置",
-            "已完成：\n• 卡牌命名 + 贴图\n• 三关固定补牌顺序\n• 奖励插入时机\n• 奖励三选一卡面 UI\n\n" + preview,
+            "已完成：\n• 卡牌命名 + 贴图\n• 三关固定补牌顺序\n• 意图/弱点回合表\n• 奖励插入时机\n• 奖励三选一卡面 UI\n\n" + preview,
             "OK");
+    }
+
+    /// <summary>
+    /// 写入策划案三关意图循环：含「无弱点」回合；山鬼蓄力与重击拆为两步。
+    /// </summary>
+    private static void ApplyPlanIntentLoops()
+    {
+        SetStageIntentLoop("Stage_01_XiaoYao", new List<EnemyIntentController.IntentStep>
+        {
+            Step(EnemyIntentKind.Attack, "普通攻击", WeaknessType.RedAttack, 5, 0),
+            Step(EnemyIntentKind.Attack, "普通攻击", WeaknessType.None, 5, 0),
+            Step(EnemyIntentKind.Attack, "攻击", WeaknessType.RedAttack, 7, 0),
+        });
+        SetStageIntentLoop("Stage_02_ShiLing", new List<EnemyIntentController.IntentStep>
+        {
+            Step(EnemyIntentKind.Defend, "正在防御", WeaknessType.YellowArmor, 0, 8),
+            Step(EnemyIntentKind.Attack, "普通攻击", WeaknessType.None, 6, 0),
+            Step(EnemyIntentKind.Defend, "正在防御", WeaknessType.YellowArmor, 0, 6),
+            Step(EnemyIntentKind.Attack, "重击", WeaknessType.None, 10, 0),
+        });
+        SetStageIntentLoop("Stage_03_ShanGui", new List<EnemyIntentController.IntentStep>
+        {
+            Step(EnemyIntentKind.Attack, "普通攻击", WeaknessType.RedAttack, 8, 0),
+            Step(EnemyIntentKind.Defend, "正在防御", WeaknessType.YellowArmor, 0, 8),
+            Step(EnemyIntentKind.Charge, "蓄力中", WeaknessType.PurpleSeal, 0, 0),
+            Step(EnemyIntentKind.Heavy, "重击", WeaknessType.None, 18, 0),
+        });
+    }
+
+    private static EnemyIntentController.IntentStep Step(
+        EnemyIntentKind kind, string name, WeaknessType weak, int power, int armor)
+    {
+        return new EnemyIntentController.IntentStep
+        {
+            kind = kind,
+            displayName = name,
+            exposedWeakness = weak,
+            power = power,
+            armorGain = armor
+        };
+    }
+
+    private static void SetStageIntentLoop(string stageFileName, List<EnemyIntentController.IntentStep> loop)
+    {
+        string path = StageFolder + "/" + stageFileName + ".asset";
+        var stage = AssetDatabase.LoadAssetAtPath<BattleStageSO>(path);
+        if (stage == null)
+        {
+            Debug.LogError("[ApplyPlanCardData] 缺少关卡：" + stageFileName);
+            return;
+        }
+        stage.intentLoop = loop;
+        EditorUtility.SetDirty(stage);
     }
 
     [MenuItem("AR封妖/命名卡牌并绑定贴图")]

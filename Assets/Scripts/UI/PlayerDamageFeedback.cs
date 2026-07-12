@@ -4,7 +4,8 @@ using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
-/// 玩家受击反馈：HUD 震动 + 全屏红闪。
+/// 玩家受击反馈：新版 HUD 震动 + 全屏红闪。
+/// 优先抖动 HUD_ArtSkin_Adjustable（及玩家侧关键节点），兼容旧 HUD 名。
 /// </summary>
 public class PlayerDamageFeedback : MonoBehaviour
 {
@@ -15,27 +16,45 @@ public class PlayerDamageFeedback : MonoBehaviour
     public Canvas targetCanvas;
     public Image redFlashImage;
 
-    [Header("要抖动的 HUD 名（Canvas 子节点）")]
-    public string[] shakeHudNames =
+    [Header("要抖动的 HUD（按优先级收集，存在即加入）")]
+    [Tooltip("新版可调 HUD 根节点，最重要")]
+    public string primaryHudRoot = "HUD_ArtSkin_Adjustable";
+
+    [Tooltip("优先抖动的子节点名（在 primaryHudRoot 下查找）")]
+    public string[] preferredChildNames =
+    {
+        "PlayerHealth_可调",
+        "PlayerEnergy_可调",
+        "PlayerArmor_可调",
+        "EndTurn_Adjustable",
+        "TurnInfoPanel_可调",
+        "BossHealth_可调"
+    };
+
+    [Tooltip("旧版 HUD 名（仅作兼容回退）")]
+    public string[] legacyHudNames =
     {
         "HUD_Player", "HUD_Enemy", "HUD_SideInfo", "HUD_Actions"
     };
 
     [Header("震动（锚点像素）")]
-    public float shakeDuration = 0.22f;
-    public float shakeStrength = 42f;
-    public float heavyShakeStrength = 64f;
-    public int shakeVibrato = 22;
+    public float shakeDuration = 0.28f;
+    public float shakeStrength = 28f;
+    public float heavyShakeStrength = 48f;
+    public int shakeVibrato = 24;
     public int heavyDamageThreshold = 8;
+    [Tooltip("主 HUD 根额外放大一点强度")]
+    public float rootStrengthMul = 1.15f;
 
     [Header("红闪")]
     public Color flashColor = new Color(0.85f, 0.05f, 0.08f, 1f);
-    public float flashPeakAlpha = 0.55f;
-    public float heavyFlashPeakAlpha = 0.72f;
-    public float flashIn = 0.06f;
-    public float flashOut = 0.22f;
+    public float flashPeakAlpha = 0.48f;
+    public float heavyFlashPeakAlpha = 0.68f;
+    public float flashIn = 0.05f;
+    public float flashOut = 0.28f;
 
     private readonly List<RectTransform> shakeTargets = new List<RectTransform>();
+    private readonly HashSet<int> shakeTargetIds = new HashSet<int>();
     private readonly Dictionary<int, Vector2> basePos = new Dictionary<int, Vector2>();
     private Tween flashTween;
     private CharacterStats boundStats;
@@ -57,13 +76,11 @@ public class PlayerDamageFeedback : MonoBehaviour
         private void Update()
         {
             frames++;
-            // 等几帧，保证 Canvas / Player 都已就绪
             if (frames < 2) return;
             EnsureExists();
             var fb = Instance;
             if (fb != null)
                 fb.ForceRebind();
-            // 多试几次，覆盖开战较晚的情况
             if (frames > 120 || (fb != null && fb.IsBound))
                 Destroy(gameObject);
         }
@@ -87,19 +104,7 @@ public class PlayerDamageFeedback : MonoBehaviour
             return existing;
         }
 
-        Canvas canvas = null;
-        var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-        // 优先 Screen Space 主 Canvas
-        for (int i = 0; i < canvases.Length; i++)
-        {
-            if (canvases[i] != null && canvases[i].gameObject.name == "Canvas")
-            {
-                canvas = canvases[i];
-                break;
-            }
-        }
-        if (canvas == null && canvases.Length > 0)
-            canvas = canvases[0];
+        Canvas canvas = FindMainCanvas();
         if (canvas == null) return null;
 
         var host = canvas.gameObject.GetComponent<PlayerDamageFeedback>();
@@ -109,6 +114,17 @@ public class PlayerDamageFeedback : MonoBehaviour
         Instance = host;
         host.ForceRebind();
         return host;
+    }
+
+    private static Canvas FindMainCanvas()
+    {
+        var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            if (canvases[i] != null && canvases[i].gameObject.name == "Canvas")
+                return canvases[i];
+        }
+        return canvases != null && canvases.Length > 0 ? canvases[0] : null;
     }
 
     private void Awake()
@@ -123,7 +139,6 @@ public class PlayerDamageFeedback : MonoBehaviour
 
     private void Update()
     {
-        // 未绑定时周期性重试（开战前后 Player 引用才稳定）
         if (boundStats != null) return;
         rebindTimer -= Time.unscaledDeltaTime;
         if (rebindTimer > 0f) return;
@@ -144,19 +159,7 @@ public class PlayerDamageFeedback : MonoBehaviour
         if (targetCanvas == null)
             targetCanvas = GetComponent<Canvas>();
         if (targetCanvas == null)
-        {
-            var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-            for (int i = 0; i < canvases.Length; i++)
-            {
-                if (canvases[i] != null && canvases[i].name == "Canvas")
-                {
-                    targetCanvas = canvases[i];
-                    break;
-                }
-            }
-            if (targetCanvas == null && canvases.Length > 0)
-                targetCanvas = canvases[0];
-        }
+            targetCanvas = FindMainCanvas();
 
         EnsureFlashOverlay();
         CollectShakeTargets();
@@ -176,14 +179,13 @@ public class PlayerDamageFeedback : MonoBehaviour
         }
 
         if (found == null) return;
-
         if (boundStats == found) return;
 
         Unbind();
         playerStats = found;
         boundStats = found;
         boundStats.OnTookHit += OnPlayerTookHit;
-        Debug.Log($"[PlayerDamageFeedback] 已绑定玩家受击：{boundStats.gameObject.name}");
+        Debug.Log($"[PlayerDamageFeedback] 已绑定玩家受击：{boundStats.gameObject.name}，抖动节点={shakeTargets.Count}");
     }
 
     private void Unbind()
@@ -203,7 +205,8 @@ public class PlayerDamageFeedback : MonoBehaviour
     {
         if (incomingDamage <= 0) return;
 
-        ForceRebind();
+        if (targetCanvas == null)
+            ForceRebind();
         EnsureFlashOverlay();
         CollectShakeTargets();
 
@@ -218,9 +221,10 @@ public class PlayerDamageFeedback : MonoBehaviour
     {
         if (shakeTargets.Count == 0)
             CollectShakeTargets();
+        if (shakeTargets.Count == 0) return;
 
         float strength = heavy ? heavyShakeStrength : shakeStrength;
-        float dur = heavy ? shakeDuration * 1.2f : shakeDuration;
+        float dur = heavy ? shakeDuration * 1.25f : shakeDuration;
 
         for (int i = 0; i < shakeTargets.Count; i++)
         {
@@ -232,10 +236,13 @@ public class PlayerDamageFeedback : MonoBehaviour
                 basePos[id] = rt.anchoredPosition;
 
             Vector2 origin = basePos[id];
-            rt.DOKill();
+            // 根节点稍强一点
+            float mul = (rt.name == primaryHudRoot) ? rootStrengthMul : 1f;
+            float s = strength * mul;
+
+            rt.DOKill(true);
             rt.anchoredPosition = origin;
-            // 用显式 Vector2 强度，横纵都明显
-            rt.DOShakeAnchorPos(dur, new Vector2(strength, strength * 0.65f), shakeVibrato, 90f, false, true)
+            rt.DOShakeAnchorPos(dur, new Vector2(s, s * 0.7f), shakeVibrato, 90f, false, true)
                 .SetUpdate(true)
                 .SetId("PlayerDmgShake_" + id)
                 .OnKill(() =>
@@ -254,10 +261,8 @@ public class PlayerDamageFeedback : MonoBehaviour
         EnsureFlashOverlay();
         if (redFlashImage == null) return;
 
-        // 每次置顶，避免被其它 HUD 盖住
         redFlashImage.transform.SetAsLastSibling();
         redFlashImage.gameObject.SetActive(true);
-        // 无 sprite 时 Unity UI Image 不绘制——强制白贴图
         if (redFlashImage.sprite == null)
             redFlashImage.sprite = GetWhiteSprite();
 
@@ -317,7 +322,6 @@ public class PlayerDamageFeedback : MonoBehaviour
     private static Sprite GetWhiteSprite()
     {
         if (s_whiteSprite != null) return s_whiteSprite;
-        // 用内置白贴图生成 Sprite（无 sprite 的 Image 不会画出来）
         var tex = Texture2D.whiteTexture;
         s_whiteSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
         s_whiteSprite.name = "PlayerDamageFeedback_White";
@@ -327,32 +331,67 @@ public class PlayerDamageFeedback : MonoBehaviour
     private void CollectShakeTargets()
     {
         shakeTargets.Clear();
+        shakeTargetIds.Clear();
         if (targetCanvas == null) return;
 
-        for (int i = 0; i < shakeHudNames.Length; i++)
-        {
-            var t = targetCanvas.transform.Find(shakeHudNames[i]);
-            if (t == null) continue;
-            var rt = t as RectTransform;
-            if (rt == null) continue;
-            shakeTargets.Add(rt);
-            int id = rt.GetInstanceID();
-            if (!basePos.ContainsKey(id))
-                basePos[id] = rt.anchoredPosition;
-        }
+        Transform canvasTf = targetCanvas.transform;
 
-        if (shakeTargets.Count == 0)
+        // 1) 新版 HUD 根
+        Transform artRoot = canvasTf.Find(primaryHudRoot);
+        if (artRoot == null)
         {
-            // 回退：抖整个 Canvas 根（除 flash）
-            var rt = targetCanvas.transform as RectTransform;
-            if (rt != null)
+            // 深度找一次（防止改名层级）
+            artRoot = FindDeep(canvasTf, primaryHudRoot);
+        }
+        if (artRoot != null)
+        {
+            TryAddShake(artRoot as RectTransform);
+
+            // 2) 关键关键的玩家侧 / 关键 UI 子节点（更有「受击」感）
+            for (int i = 0; i < preferredChildNames.Length; i++)
             {
-                shakeTargets.Add(rt);
-                int id = rt.GetInstanceID();
-                if (!basePos.ContainsKey(id))
-                    basePos[id] = rt.anchoredPosition;
+                var child = artRoot.Find(preferredChildNames[i]);
+                if (child == null)
+                    child = FindDeep(artRoot, preferredChildNames[i]);
+                TryAddShake(child as RectTransform);
             }
         }
+
+        // 3) 旧版 HUD 兼容
+        for (int i = 0; i < legacyHudNames.Length; i++)
+        {
+            var t = canvasTf.Find(legacyHudNames[i]);
+            if (t != null && t.gameObject.activeInHierarchy)
+                TryAddShake(t as RectTransform);
+        }
+
+        // 4) 仍没有：抖 Canvas 根（最后手段）
+        if (shakeTargets.Count == 0)
+            TryAddShake(canvasTf as RectTransform);
+    }
+
+    private void TryAddShake(RectTransform rt)
+    {
+        if (rt == null) return;
+        // 不抖红闪层
+        if (rt.name == "HUD_DamageFlash") return;
+        int id = rt.GetInstanceID();
+        if (!shakeTargetIds.Add(id)) return;
+        shakeTargets.Add(rt);
+        if (!basePos.ContainsKey(id))
+            basePos[id] = rt.anchoredPosition;
+    }
+
+    private static Transform FindDeep(Transform root, string name)
+    {
+        if (root == null || string.IsNullOrEmpty(name)) return null;
+        if (root.name == name) return root;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var f = FindDeep(root.GetChild(i), name);
+            if (f != null) return f;
+        }
+        return null;
     }
 
     private void ResetShakeTargets()

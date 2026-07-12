@@ -145,22 +145,26 @@ namespace FSM
                     animBridge = tm.enemyStats.gameObject.AddComponent<MonsterAnimationBridge>();
 
                 // 2. Play attack/heavy animation depending on intent kind
+                // Charge = 蓄势（不造成伤害）；Heavy = 释放重击；Attack = 普通/无弱点攻击
                 if (animBridge != null && tm.enemyIntent != null && tm.enemyIntent.CurrentStep != null)
                 {
                     var kind = tm.enemyIntent.CurrentStep.kind;
-                    if (kind == EnemyIntentKind.Charge)
+                    if (kind == EnemyIntentKind.Heavy)
                     {
                         animBridge.PlayHeavyAttack();
                         Debug.Log($"[FSM] PlayHeavyAttack: {tm.enemyIntent.CurrentStep.displayName}");
                     }
                     else if (kind == EnemyIntentKind.Attack)
                     {
-                        animBridge.PlayAttack();
-                        Debug.Log($"[FSM] PlayAttack: {tm.enemyIntent.CurrentStep.displayName}");
+                        // 高伤普攻（如石灵重击）也可用重击动画
+                        bool hardHit = tm.enemyIntent.CurrentStep.power >= 10;
+                        if (hardHit) animBridge.PlayHeavyAttack();
+                        else animBridge.PlayAttack();
+                        Debug.Log($"[FSM] PlayAttack(hard={hardHit}): {tm.enemyIntent.CurrentStep.displayName}");
                     }
                     else
                     {
-                        // Defend / other intents stay in Idle or play basic action
+                        // Defend / Charge 蓄势：保持 Idle 或基础动作
                         animBridge.PlayIdle();
                     }
                 }
