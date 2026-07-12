@@ -223,6 +223,33 @@ public class CardDeck : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (handAnchor != null)
+        {
+            Camera mainCam = (CardCameraManager.Instance != null && CardCameraManager.Instance.mainCamera != null)
+                ? CardCameraManager.Instance.mainCamera
+                : Camera.main;
+
+            if (mainCam != null)
+            {
+                // 1. 根据屏幕固定百分比（屏幕底部向上 17.5% 处）和深度 Z=4，计算卡牌期望停留的绝对世界位置
+                float targetScreenYPercentage = 0.175f;
+                Vector3 cardTargetScreenPos = new Vector3(Screen.width * 0.5f, Screen.height * targetScreenYPercentage, 4f);
+                Vector3 cardTargetWorldPos = mainCam.ScreenToWorldPoint(cardTargetScreenPos);
+
+                // 2. 获取 CardLayoutManager 配置的局部 Y 轴偏移量
+                float localOffsetY = (LayoutManager != null) ? LayoutManager.centerPoint.y : -2.8f;
+
+                // 3. 结合 HandAnchor 的局部缩放，对 HandAnchor 的位置进行反向补偿
+                float scaleY = handAnchor.localScale.y;
+                float worldOffset = localOffsetY * scaleY;
+
+                handAnchor.position = cardTargetWorldPos - mainCam.transform.up * worldOffset;
+            }
+        }
+    }
+
     public void DiscardHand()
     {
         foreach (var card in handCardObjectList)

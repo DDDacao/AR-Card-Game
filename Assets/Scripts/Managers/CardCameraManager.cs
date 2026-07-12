@@ -123,6 +123,21 @@ public class CardCameraManager : MonoBehaviour
         Debug.Log("[CardCameraManager] URP 双相机叠加设置成功，并已绑定物理射线检测器！");
     }
 
+    private void LateUpdate()
+    {
+        if (cardCamera != null && mainCamera != null)
+        {
+            cardCamera.projectionMatrix = mainCamera.projectionMatrix;
+            cardCamera.fieldOfView = mainCamera.fieldOfView;
+            cardCamera.aspect = mainCamera.aspect;
+            cardCamera.rect = mainCamera.rect;
+            cardCamera.nearClipPlane = mainCamera.nearClipPlane;
+            cardCamera.farClipPlane = mainCamera.farClipPlane;
+            cardCamera.orthographic = mainCamera.orthographic;
+            cardCamera.orthographicSize = mainCamera.orthographicSize;
+        }
+    }
+
     /// <summary>
     /// 递归设置 GameObject 及其所有子物体的 Layer
     /// </summary>
