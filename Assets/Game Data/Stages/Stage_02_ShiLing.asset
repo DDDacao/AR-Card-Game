@@ -27,7 +27,7 @@ MonoBehaviour:
     armorGain: 8
   - kind: 0
     displayName: "\u666E\u901A\u653B\u51FB"
-    exposedWeakness: 0
+    exposedWeakness: 1
     power: 6
     armorGain: 0
   - kind: 1
@@ -37,7 +37,7 @@ MonoBehaviour:
     armorGain: 6
   - kind: 0
     displayName: "\u91CD\u51FB"
-    exposedWeakness: 0
+    exposedWeakness: 1
     power: 10
     armorGain: 0
   rewardChoices:

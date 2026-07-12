@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// 敌人意图循环 + 按意图显示对应弱点。
 /// 三关（小妖 / 石灵 / 山鬼）共用同一套规则：
-/// - 意图与弱点由各关 <see cref="BattleStageSO.intentLoop"/> 配置；
+/// - 意图与弱点由各关 <see cref="BattleStageSO.intentLoop"/> 配置，走完后取模循环；
 /// - 每玩家回合弱点最多触发 1 次 QTE，触发后当回合消失。
 /// Boss 蓄力为两步：Charge（紫）→ Heavy（无弱点，若未打断则结算重击）。
 /// </summary>
@@ -73,6 +73,12 @@ public class EnemyIntentController : MonoBehaviour
 
     /// <summary>蓄力蓄势已完成且未被打断，等待重击释放</summary>
     public bool IsCharging { get; private set; }
+
+    /// <summary>
+    /// 当前意图步是否已在「展示时」发放过防御护甲。
+    /// 避免 Present / Apply 重复叠加，也避免敌方结算时再加一次。
+    /// </summary>
+    private bool defendArmorGrantedForCurrentStep;
 
     public event Action OnIntentChanged;
 
@@ -149,11 +155,16 @@ public class EnemyIntentController : MonoBehaviour
         ChargeInterrupted = false;
         IsCharging = false;
         WeaknessExpendedThisTurn = false;
+        defendArmorGrantedForCurrentStep = false;
         ApplyCurrentStep();
+        // 开局若第一意图就是防御：展示即叠甲，供玩家本回合应对
+        TryGrantDefendArmorOnPresent();
     }
 
     /// <summary>
-    /// 玩家回合开始时：展示本回合意图与弱点（尚未执行）
+    /// 玩家回合开始时：展示本回合意图与弱点。
+    /// 若本回合意图为「正在防御」，在此发放护甲（而非敌方回合再加），
+    /// 这样黄弱点 QTE 清甲后不会在同回合末再被叠回去。
     /// </summary>
     public void PresentIntentForPlayerTurn()
     {
@@ -165,6 +176,31 @@ public class EnemyIntentController : MonoBehaviour
         // 换模 / AR 恢复后可能丢引用，每次展示前重扫弱点
         RefreshWeaknessList();
         ApplyCurrentStep();
+        TryGrantDefendArmorOnPresent();
+    }
+
+    /// <summary>
+    /// 意图展示时发放防御护甲（每一步只发一次）。
+    /// </summary>
+    private void TryGrantDefendArmorOnPresent()
+    {
+        if (defendArmorGrantedForCurrentStep) return;
+        if (CurrentStep == null || CurrentStep.kind != EnemyIntentKind.Defend) return;
+        if (stats == null)
+        {
+            stats = GetComponent<CharacterStats>();
+            if (stats == null)
+                stats = GetComponentInParent<CharacterStats>();
+        }
+        if (stats == null || stats.CurrentHP <= 0) return;
+
+        int gain = CurrentStep.armorGain;
+        if (gain > 0)
+        {
+            stats.AddArmor(gain);
+            Debug.Log($"[EnemyIntent] 意图展示「{CurrentStep.displayName}」：立即获得 {gain} 点护甲（当前 {stats.CurrentArmor}）。");
+        }
+        defendArmorGrantedForCurrentStep = true;
     }
 
     /// <summary>
@@ -223,8 +259,9 @@ public class EnemyIntentController : MonoBehaviour
                     break;
 
                 case EnemyIntentKind.Defend:
-                    stats.AddArmor(step.armorGain);
-                    Debug.Log($"[EnemyIntent] 获得 {step.armorGain} 点护甲");
+                    // 护甲已在意图展示时（Present / 推进到本步）发放，此处不再叠加，
+                    // 避免玩家本回合黄弱点 QTE 清甲后，敌方结算又把甲加回来。
+                    Debug.Log($"[EnemyIntent] 防御意图结算：护甲已在展示时发放，本步不再叠加。");
                     break;
 
                 case EnemyIntentKind.Charge:
@@ -271,13 +308,22 @@ public class EnemyIntentController : MonoBehaviour
             count = intentLoop.Count;
         }
 
+        int prev = executedIndex;
         CurrentStepIndex = (CurrentStepIndex + 1) % Mathf.Max(1, count);
         ChargeInterrupted = false;
+        // 进入新意图步：允许再次发放防御护甲
+        defendArmorGrantedForCurrentStep = false;
+
+        // 取模循环：走完表末自动回到第 0 步（与符匣循环一致，长战斗可继续）
+        if (count > 1 && prev == count - 1 && CurrentStepIndex == 0)
+            Debug.Log($"[EnemyIntent] 意图表循环一轮（共 {count} 步），重新从第 1 步开始。");
 
         RefreshWeaknessList();
         ApplyCurrentStep();
+        // 若下一步是防御：在展示下一意图时就叠甲，玩家下回合面对的是已有护甲的状态
+        TryGrantDefendArmorOnPresent();
 
-        Debug.Log($"[EnemyIntent] 推进 {executedIndex} → {CurrentStepIndex}/{count}，下一意图：{CurrentDisplayName}，弱点：{CurrentWeakness}");
+        Debug.Log($"[EnemyIntent] 推进 {prev} → {CurrentStepIndex}/{count}，下一意图：{CurrentDisplayName}，弱点：{CurrentWeakness}");
     }
 
     private void ApplyCurrentStep()

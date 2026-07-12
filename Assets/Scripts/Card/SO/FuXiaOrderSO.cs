@@ -4,6 +4,7 @@ using UnityEngine;
 /// <summary>
 /// 符匣固定补牌顺序。不洗牌：从前往后依次发给玩家。
 /// 前 initialHandSize 张用于开局手牌，之后每回合从剩余序列补牌。
+/// 序列抽尽后由 CardDeck.loopDeckWhenEmpty 按本列表循环再发。
 /// </summary>
 [CreateAssetMenu(fileName = "FuXiaOrder", menuName = "Card/FuXiaOrderSO")]
 public class FuXiaOrderSO : ScriptableObject

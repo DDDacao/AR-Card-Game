@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: enemy_xiaoyao
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: "\u5C0F\u5996"
-  maxHP: 24
+  maxHP: 30
   maxEnergy: 0
   startArmor: 0

@@ -49,9 +49,9 @@ public static class SetupCampaign
             8, 0, 2, "重伤并打断蓄力", seal != null ? seal.cardImage : attack.cardImage);
 
         // ---- 敌人数据 ----
-        var dataXiao = CreateEnemyData("enemy_xiaoyao", "小妖", 24, 0);
-        var dataShi = CreateEnemyData("enemy_shiling", "石灵", 32, 6);
-        var dataBoss = CreateEnemyData("enemy_shangui", "山鬼", 55, 0);
+        var dataXiao = CreateEnemyData("enemy_xiaoyao", "小妖", 30, 0);
+        var dataShi = CreateEnemyData("enemy_shiling", "石灵", 40, 6);
+        var dataBoss = CreateEnemyData("enemy_shangui", "山鬼", 65, 0);
 
         // ---- 三套符匣 ----
         var fx1 = CreateFuXia("FuXia_XiaoYao", "小妖战符匣", 4, new List<CardDataSO>
@@ -148,7 +148,7 @@ public static class SetupCampaign
 
         Debug.Log("[SetupCampaign] 三关战役配置完成。");
         EditorUtility.DisplayDialog("三关战役",
-            "已配置：\n• 小妖(24HP) → 奖励三选一\n• 石灵(32HP/6甲) → 奖励三选一\n• 山鬼(55HP) Boss\n\n奖励会带入后续符匣。\nPlay 后由 BattleBootstrap 启动战役。",
+            "已配置：\n• 小妖(30HP) → 奖励三选一\n• 石灵(40HP/6甲) → 奖励三选一\n• 山鬼(65HP) Boss\n\n奖励会带入后续符匣。\nPlay 后由 BattleBootstrap 启动战役。",
             "OK");
     }
 
@@ -289,7 +289,7 @@ public static class SetupCampaign
         };
     }
 
-    /// <summary>策划案：石灵 — T1 防8黄 / T2 攻6无 / T3 防6黄 / T4 重击10无，循环。</summary>
+    /// <summary>石灵 — T1 防8黄 / T2 攻6红 / T3 防6黄 / T4 重击10红，循环。</summary>
     static List<EnemyIntentController.IntentStep> IntentShiLing()
     {
         return new List<EnemyIntentController.IntentStep>
@@ -302,7 +302,7 @@ public static class SetupCampaign
             new EnemyIntentController.IntentStep
             {
                 kind = EnemyIntentKind.Attack, displayName = "普通攻击",
-                exposedWeakness = WeaknessType.None, power = 6
+                exposedWeakness = WeaknessType.RedAttack, power = 6
             },
             new EnemyIntentController.IntentStep
             {
@@ -312,7 +312,7 @@ public static class SetupCampaign
             new EnemyIntentController.IntentStep
             {
                 kind = EnemyIntentKind.Attack, displayName = "重击",
-                exposedWeakness = WeaknessType.None, power = 10
+                exposedWeakness = WeaknessType.RedAttack, power = 10
             }
         };
     }

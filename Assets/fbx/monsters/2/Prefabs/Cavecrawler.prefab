@@ -26,12 +26,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 134820377797362916}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.97, y: -0.466, z: -0.023}
+  m_LocalRotation: {x: 0.23170349, y: 0.4161412, z: -0.5978246, w: 0.6447836}
+  m_LocalPosition: {x: -0.036, y: 0.424, z: -0.121}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 6735205811123024605}
+  m_Father: {fileID: 6735205811123024619}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!135 &6334636348208949135
 SphereCollider:
@@ -74,6 +74,85 @@ MonoBehaviour:
   haloAlpha: 0.35
   spinDegreesPerSecond: 12
   markerColor: {r: 1, g: 0.82, b: 0.2, a: 0.95}
+  customIcon: {fileID: 0}
+  hitRadius: 0.65
+  followTarget: {fileID: 0}
+  followLocalOffset: {x: 0, y: 0, z: 0}
+  owner: {fileID: 0}
+--- !u!1 &1653171944209715543
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8851597959443641964}
+  - component: {fileID: 6675232751524072376}
+  - component: {fileID: 5817159917107195634}
+  m_Layer: 0
+  m_Name: Weakness_Red
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8851597959443641964
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1653171944209715543}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.048, y: -0.02, z: 0.384}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6735205811123024605}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &6675232751524072376
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1653171944209715543}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.65
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5817159917107195634
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1653171944209715543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b432be4e0ba73314badd5d2490e27949, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeaknessPoint
+  weaknessType: 1
+  keepManualPlacement: 1
+  showMarker: 1
+  visualCoreScale: 0.25
+  haloScaleMul: 1.28
+  haloAlpha: 0.35
+  spinDegreesPerSecond: 12
+  markerColor: {r: 1, g: 0.25, b: 0.22, a: 0.95}
   customIcon: {fileID: 0}
   hitRadius: 0.65
   followTarget: {fileID: 0}
@@ -265,7 +344,8 @@ Transform:
   m_LocalPosition: {x: -1.0537744, y: -0.0000004959106, z: -0.000000069141386}
   m_LocalScale: {x: 1, y: 1, z: 0.99999994}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 9144259061939867097}
   m_Father: {fileID: 6735205811123024617}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6735205811123252877
@@ -1633,7 +1713,7 @@ Transform:
   - {fileID: 6735205811123024527}
   - {fileID: 6735205811123024515}
   - {fileID: 6735205811123024537}
-  - {fileID: 9144259061939867097}
+  - {fileID: 8851597959443641964}
   m_Father: {fileID: 6735205811123024579}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6735205811123252991

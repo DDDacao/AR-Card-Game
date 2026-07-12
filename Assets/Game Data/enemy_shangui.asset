@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: enemy_shangui
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
   characterName: "\u5C71\u9B3C"
-  maxHP: 55
+  maxHP: 65
   maxEnergy: 0
   startArmor: 0
