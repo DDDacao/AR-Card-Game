@@ -4,6 +4,8 @@ using DG.Tweening;
 
 public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler, IDragHandler
 {
+    public static bool InteractionEnabled = true;
+
     public GameObject arrowPrefab;
     private GameObject currentArrow;
 
@@ -30,7 +32,14 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
     {
         ClearWeaknessAim();
 
+        if (!InteractionEnabled)
+        {
+            Debug.LogWarning("[CardDragHandler] AR 识别丢失，手牌交互已禁用。");
+            return;
+        }
+
         if (QTEManager.Instance != null && QTEManager.Instance.IsRunning)
+
         {
             Debug.LogWarning("[CardDragHandler] QTE 进行中，不能出牌！");
             return;

@@ -38,7 +38,7 @@ public class CardCameraManager : MonoBehaviour
         SetupCameraStack();
     }
 
-    private void SetupCameraStack()
+    public void SetupCameraStack()
     {
         // 1. 获取/确定主相机
         if (mainCamera == null)

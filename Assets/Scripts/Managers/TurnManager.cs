@@ -49,6 +49,10 @@ public class TurnManager : MonoBehaviour
     {
         Instance = this;
         StateMachine = new BattleStateMachine();
+        isBattleActive = false; // 强行重置，防 Inspector 误勾选
+        battleEnded = false;
+        isPlayerTurn = true;
+        currentTurnIndex = 0;
     }
 
     private void Start()
@@ -99,6 +103,23 @@ public class TurnManager : MonoBehaviour
 
         if (cardDeck == null)
             cardDeck = FindAnyObjectByType<CardDeck>();
+    }
+
+    public void SetEnemyTarget(CharacterStats stats)
+    {
+        enemyStats = stats;
+        if (enemyStats != null)
+        {
+            enemyIntent = enemyStats.GetComponent<EnemyIntentController>();
+            if (enemyIntent == null)
+                enemyIntent = enemyStats.GetComponentInChildren<EnemyIntentController>();
+            if (enemyIntent == null)
+                enemyIntent = enemyStats.gameObject.AddComponent<EnemyIntentController>();
+        }
+        else
+        {
+            enemyIntent = null;
+        }
     }
 
     public void StartBattle()
