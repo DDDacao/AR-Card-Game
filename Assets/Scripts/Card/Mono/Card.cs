@@ -54,9 +54,8 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
         if (typeText != null)
         {
-            string label = GetTypeLabel(data.cardType);
-            typeText.text = label;
-            TmpChineseFontUtil.Apply(typeText, label);
+            typeText.text = data.cardName;
+            TmpChineseFontUtil.Apply(typeText, data.cardName);
         }
     }
 

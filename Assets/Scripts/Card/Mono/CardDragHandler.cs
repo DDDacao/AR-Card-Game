@@ -96,7 +96,7 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
         if (!canMove) return;
 
-        Vector3 screenPos = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10);
+        Vector3 screenPos = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 6);
         Camera dragCamera = (CardCameraManager.Instance != null && CardCameraManager.Instance.cardCamera != null)
             ? CardCameraManager.Instance.cardCamera
             : Camera.main;
@@ -104,7 +104,8 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
         Vector3 worldPos = dragCamera.ScreenToWorldPoint(screenPos);
         currentCard.transform.position = worldPos;
-        canExecute = worldPos.y > 0.5f;
+        // 改用屏幕坐标判定：拖拽高度超过屏幕高度的 50% 即判定为可出牌
+        canExecute = eventData.position.y > Screen.height * 0.5f;
     }
 
     private void Update()
@@ -170,6 +171,11 @@ public class CardDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
         {
             // 使用全部命中结果：身体 BoxCollider 常挡在弱点前面，单次 Raycast 会漏掉弱点
             ResolveAttackTarget(Input.mousePosition, out targetEnemy, out hitWeakness, out canExecute);
+        }
+        else
+        {
+            // 非指向性卡牌在松手时，重新以屏幕百分比进行最终确认
+            canExecute = eventData.position.y > Screen.height * 0.5f;
         }
 
         if (canExecute)
