@@ -639,6 +639,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 4533461424076634371, guid: 560475964f3f9b54bae277aae3e78b07, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4533461424076634371, guid: 560475964f3f9b54bae277aae3e78b07, type: 3}
       propertyPath: introVideo
       value: 
       objectReference: {fileID: 32900000, guid: 0944639a245f8384db4819e5a6ffea11, type: 3}
@@ -689,6 +693,10 @@ PrefabInstance:
     - target: {fileID: 8882248932510235337, guid: 560475964f3f9b54bae277aae3e78b07, type: 3}
       propertyPath: m_Name
       value: PF_StartIntro
+      objectReference: {fileID: 0}
+    - target: {fileID: 8882248932510235337, guid: 560475964f3f9b54bae277aae3e78b07, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -9528,8 +9536,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardLayoutManager
   isHorizontal: 1
   maxWidth: 4.2
-  cardSpacing: 1.15
-  centerPoint: {x: 0, y: -2.8, z: 0}
+  cardSpacing: 0.95
+  centerPoint: {x: 0, y: -2.9, z: 0}
   cardPositions: []
 --- !u!4 &1624641288
 Transform:

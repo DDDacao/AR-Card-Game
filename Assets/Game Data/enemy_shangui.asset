@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51982aaa12abf8a489042a8b400ce9e5, type: 3}
   m_Name: enemy_shangui
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
-  characterName: "\u5C71\u9B3C"
+  characterName: "\u51A5\u5929\u7FFC\u9B54"
   maxHP: 65
   maxEnergy: 0
   startArmor: 0

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51982aaa12abf8a489042a8b400ce9e5, type: 3}
   m_Name: enemy_shiling
   m_EditorClassIdentifier: Assembly-CSharp::CharacterDataSO
-  characterName: "\u77F3\u7075"
+  characterName: "\u5E7D\u7A74\u8F4D\u9B54"
   maxHP: 40
   maxEnergy: 0
   startArmor: 6
