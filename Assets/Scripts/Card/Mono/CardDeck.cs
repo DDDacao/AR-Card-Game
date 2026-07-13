@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -161,6 +162,12 @@ public class CardDeck : MonoBehaviour
             handCardObjectList.Add(card);
             var delay = drawn * 0.15f;
             SetCardLayout(delay);
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayDrawCard();
+            }
+
             drawn++;
         }
 
@@ -258,6 +265,26 @@ public class CardDeck : MonoBehaviour
         return DrawCard(Mathf.Min(amount, room));
     }
 
+    /// <summary>
+    /// 协程：按指定间隔一张一张抽牌
+    /// </summary>
+    public IEnumerator DrawCardsOneByOneCoroutine(int amount, float interval)
+    {
+        int room = handLimit - handCardObjectList.Count;
+        int toDraw = Mathf.Min(amount, room);
+
+        for (int i = 0; i < toDraw; i++)
+        {
+            int drawn = DrawCard(1);
+            if (drawn == 0) break;
+
+            if (i < toDraw - 1)
+            {
+                yield return new WaitForSeconds(interval);
+            }
+        }
+    }
+
     private void SetCardLayout(float delay)
     {
         for (int i = 0; i < handCardObjectList.Count; i++)
@@ -269,11 +296,22 @@ public class CardDeck : MonoBehaviour
 
             currentCard.transform.DOKill();
             Vector3 targetScale = Vector3.one * handCardScale;
-            currentCard.transform.DOScale(targetScale, 0.35f).SetDelay(delay).OnComplete(() =>
+
+            if (currentCard.transform.localScale.x > 0.01f)
             {
-                if (currentCard != null)
-                    currentCard.transform.DOLocalMove(cardTransform.pos, 0.35f);
-            });
+                // 已有卡牌：立刻平滑移动到新位置，并平滑缩放到目标比例
+                currentCard.transform.DOScale(targetScale, 0.2f);
+                currentCard.transform.DOLocalMove(cardTransform.pos, 0.35f);
+            }
+            else
+            {
+                // 新生成的卡牌：先缩放再移动
+                currentCard.transform.DOScale(targetScale, 0.35f).SetDelay(delay).OnComplete(() =>
+                {
+                    if (currentCard != null)
+                        currentCard.transform.DOLocalMove(cardTransform.pos, 0.35f);
+                });
+            }
 
             var sorting = currentCard.GetComponent<SortingGroup>();
             if (sorting != null)

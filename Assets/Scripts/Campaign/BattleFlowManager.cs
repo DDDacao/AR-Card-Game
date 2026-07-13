@@ -286,6 +286,11 @@ public class BattleFlowManager : MonoBehaviour
         // 恢复手牌拖动
         CardDragHandler.InteractionEnabled = true;
 
+        if (index == 0 && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBGM();
+        }
+
         turnManager.StartBattle();
     }
 
@@ -450,6 +455,13 @@ public class BattleFlowManager : MonoBehaviour
         // 全通关
         CampaignCompleted = true;
         currentUnlockedStageIndex = 0;
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.StopBGM();
+            AudioManager.Instance.PlayCampaignVictory();
+        }
+
         if (resultUI != null)
         {
             resultUI.ShowVictory("三关尽破，封妖成功！", true, "再来一局", () =>

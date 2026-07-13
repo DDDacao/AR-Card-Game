@@ -235,6 +235,11 @@ public class QTEPanelUI : MonoBehaviour
 
     private void PlayNormalTapFeedback(int clicks, int required)
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBellClick();
+        }
+
         if (bellRoot != null)
         {
             KillBellTweens();
@@ -258,6 +263,11 @@ public class QTEPanelUI : MonoBehaviour
     private void PlayFinisherFeedback()
     {
         finisherPlayed = true;
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBellClick();
+        }
 
         if (bellRoot != null)
         {

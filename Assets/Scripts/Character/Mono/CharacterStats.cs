@@ -81,6 +81,14 @@ public class CharacterStats : MonoBehaviour
             currentHP = Mathf.Max(0, currentHP - damage);
             OnHPChanged?.Invoke(currentHP, MaxHP);
 
+            if (AudioManager.Instance != null)
+            {
+                if (IsPlayerStats())
+                    AudioManager.Instance.PlayPlayerHit();
+                else
+                    AudioManager.Instance.PlayMonsterHit();
+            }
+
             if (currentHP == 0)
             {
                 Die();

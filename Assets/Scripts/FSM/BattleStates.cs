@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using FSM;
 
 namespace FSM
@@ -92,7 +93,9 @@ namespace FSM
             }
 
             if (drawCards && tm.cardDeck != null)
-                tm.cardDeck.DrawRespectingHandLimit(tm.drawPerTurn);
+            {
+                tm.StartCoroutine(tm.cardDeck.DrawCardsOneByOneCoroutine(tm.drawPerTurn, 0.4f));
+            }
 
             // Ensure monster is in Idle at the beginning of player turn
             if (tm.enemyStats != null)
